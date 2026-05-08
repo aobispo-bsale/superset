@@ -28,6 +28,7 @@ export type SankeyFormData = QueryFormData & {
   metric: QueryFormMetric;
   source: QueryFormColumn;
   target: QueryFormColumn;
+  nodeOrder?: string;
 };
 
 export interface SankeyChartProps extends BaseChartProps<SankeyFormData> {
