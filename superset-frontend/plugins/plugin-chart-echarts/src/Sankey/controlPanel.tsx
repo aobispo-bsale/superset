@@ -67,7 +67,26 @@ const config: ControlPanelConfig = {
     {
       label: t('Chart Options'),
       expanded: true,
-      controlSetRows: [['color_scheme']],
+      controlSetRows: [
+        ['color_scheme'],
+        [
+          {
+            name: 'node_order',
+            config: {
+              type: 'TextAreaControl',
+              label: t('Custom node order'),
+              description: t(
+                'Comma-separated node names defining the vertical order. ' +
+                  'Nodes not listed appear at the end. ' +
+                  'Example: "Lead,Contacto,Demo,Cotizado".',
+              ),
+              default: '',
+              renderTrigger: true,
+              offerEditInModal: true,
+            },
+          },
+        ],
+      ],
     },
   ],
 };

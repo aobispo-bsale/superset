@@ -35,13 +35,31 @@ import { getPercentFormatter } from '../utils/formatters';
 type Link = { source: string; target: string; value: number };
 type EChartsOption = ComposeOption<SankeySeriesOption>;
 
+export function parseNodeOrder(raw?: string): Map<string, number> {
+  if (!raw?.trim()) return new Map();
+  const seen = new Set<string>();
+  const list: string[] = [];
+  raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .forEach(name => {
+      if (!seen.has(name)) {
+        seen.add(name);
+        list.push(name);
+      }
+    });
+  return new Map(list.map((name, i) => [name, i]));
+}
+
 export default function transformProps(
   chartProps: SankeyChartProps,
 ): SankeyTransformedProps {
   const refs: Refs = {};
   const { formData, height, hooks, queriesData, width, theme } = chartProps;
   const { onLegendStateChanged } = hooks;
-  const { colorScheme, metric, source, target, sliceId } = formData;
+  const { colorScheme, metric, source, target, sliceId, nodeOrder } = formData;
+  const orderMap = parseNodeOrder(nodeOrder);
   const { data } = queriesData[0];
   const colorFn = CategoricalColorNamespace.getScale(colorScheme);
   const metricLabel = getMetricLabel(metric);
@@ -125,6 +143,16 @@ export default function transformProps(
       },
       links,
       type: 'sankey',
+      ...(orderMap.size > 0 && {
+        nodeSort: (
+          a: { name?: string | number },
+          b: { name?: string | number },
+        ): number => {
+          const ia = orderMap.get(String(a.name ?? '')) ?? Infinity;
+          const ib = orderMap.get(String(b.name ?? '')) ?? Infinity;
+          return ia - ib;
+        },
+      }),
     },
     tooltip: {
       ...getDefaultTooltip(refs),
