@@ -39,6 +39,13 @@ export const SingleQueryResultPane = ({
   dataSize = 50,
   isVisible,
   canDownload,
+  columnDisplayNames,
+  rowLimit,
+  rowLimitOptions,
+  onRowLimitChange,
+  onDownloadCSV,
+  onDownloadXLSX,
+  onReload,
 }: SingleQueryResultPaneProp) => {
   const [filterText, setFilterText] = useState('');
 
@@ -71,6 +78,12 @@ export const SingleQueryResultPane = ({
         onInputChange={handleInputChange}
         isLoading={false}
         canDownload={canDownload}
+        rowLimit={rowLimit}
+        rowLimitOptions={rowLimitOptions}
+        onRowLimitChange={onRowLimitChange}
+        onDownloadCSV={onDownloadCSV}
+        onDownloadXLSX={onDownloadXLSX}
+        onReload={onReload}
       />
       <TableView
         columns={columns}
