@@ -94,6 +94,14 @@ export default function transformProps(
     },
   }));
 
+  if (orderMap.size > 0) {
+    seriesData.sort((a, b) => {
+      const ai = orderMap.get(String(a.name ?? '')) ?? Infinity;
+      const bi = orderMap.get(String(b.name ?? '')) ?? Infinity;
+      return ai - bi;
+    });
+  }
+
   // stores a map with the total values for each node considering the links
   const incomingFlows = new Map<string, number>();
   const outgoingFlows = new Map<string, number>();
@@ -144,14 +152,7 @@ export default function transformProps(
       links,
       type: 'sankey',
       ...(orderMap.size > 0 && {
-        nodeSort: (
-          a: { name?: string | number },
-          b: { name?: string | number },
-        ): number => {
-          const ia = orderMap.get(String(a.name ?? '')) ?? Infinity;
-          const ib = orderMap.get(String(b.name ?? '')) ?? Infinity;
-          return ia - ib;
-        },
+        layoutIterations: 0,
       }),
     },
     tooltip: {

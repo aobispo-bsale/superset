@@ -98,42 +98,59 @@ describe('Sankey transformProps', () => {
       hooks: {},
     }) as SankeyChartProps;
 
-  it('omits nodeSort when nodeOrder is missing (backward compatibility)', () => {
+  const getNames = (data: any[]) => data.map(n => n.name);
+
+  it('keeps default data order and omits layoutIterations when nodeOrder is missing', () => {
     const result = transformProps(buildChartProps());
     const { series } = result.echartOptions as any;
-    expect(series.nodeSort).toBeUndefined();
+    expect(series.layoutIterations).toBeUndefined();
+    expect(getNames(series.data)).toEqual(['Lead', 'Demo', 'Cotizado']);
   });
 
-  it('omits nodeSort when nodeOrder is empty string', () => {
+  it('omits layoutIterations when nodeOrder is empty string', () => {
     const result = transformProps(buildChartProps({ nodeOrder: '' }));
     const { series } = result.echartOptions as any;
-    expect(series.nodeSort).toBeUndefined();
+    expect(series.layoutIterations).toBeUndefined();
   });
 
-  it('applies nodeSort respecting custom order when nodeOrder is set', () => {
+  it('reorders data and pins layoutIterations to 0 when nodeOrder is set', () => {
     const result = transformProps(
       buildChartProps({ nodeOrder: 'Cotizado,Demo,Lead' }),
     );
     const { series } = result.echartOptions as any;
-    expect(series.nodeSort).toBeInstanceOf(Function);
-
-    const sorter = series.nodeSort as (a: any, b: any) => number;
-    expect(sorter({ name: 'Cotizado' }, { name: 'Lead' })).toBeLessThan(0);
-    expect(sorter({ name: 'Lead' }, { name: 'Demo' })).toBeGreaterThan(0);
+    expect(series.layoutIterations).toBe(0);
+    expect(getNames(series.data)).toEqual(['Cotizado', 'Demo', 'Lead']);
   });
 
   it('sends unlisted nodes to the end via Infinity fallback', () => {
-    const result = transformProps(buildChartProps({ nodeOrder: 'Lead,Demo' }));
+    const queriesData = [
+      {
+        data: [
+          { src_col: 'Lead', tgt_col: 'Demo', sum__num: 10 },
+          { src_col: 'Demo', tgt_col: 'Cotizado', sum__num: 5 },
+          { src_col: 'Perdido', tgt_col: 'Demo', sum__num: 2 },
+        ],
+      },
+    ];
+    const result = transformProps(
+      new ChartProps({
+        formData: { ...baseFormData, nodeOrder: 'Lead,Demo' },
+        width: 800,
+        height: 600,
+        queriesData,
+        theme: supersetTheme,
+        hooks: {},
+      }) as SankeyChartProps,
+    );
     const { series } = result.echartOptions as any;
-    const sorter = series.nodeSort as (a: any, b: any) => number;
-
-    expect(sorter({ name: 'Perdido' }, { name: 'Lead' })).toBeGreaterThan(0);
-    expect(sorter({ name: 'Demo' }, { name: 'Perdido' })).toBeLessThan(0);
+    const names = getNames(series.data);
+    expect(names.indexOf('Lead')).toBeLessThan(names.indexOf('Perdido'));
+    expect(names.indexOf('Demo')).toBeLessThan(names.indexOf('Perdido'));
   });
 
   it('treats whitespace-only nodeOrder as no order applied', () => {
     const result = transformProps(buildChartProps({ nodeOrder: '   ,  ,  ' }));
     const { series } = result.echartOptions as any;
-    expect(series.nodeSort).toBeUndefined();
+    expect(series.layoutIterations).toBeUndefined();
   });
 });

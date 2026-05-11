@@ -17,6 +17,16 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+### Fixed
+
+- **sankey**: `nodeOrder` now pins the rendered node sequence. The previous
+  implementation relied on ECharts' `nodeSort` callback, which only ordered
+  nodes logically — ECharts' iterative layout subsequently re-arranged them
+  visually. The fix pre-sorts `seriesData` JS-side and sets
+  `layoutIterations: 0`, forcing the renderer to honour the requested order.
+  Tests now assert the rendered data order and the `layoutIterations` flag
+  (instead of probing the dropped sort callback).
+
 ## [6.0.0-bsale.1] - 2026-05-11
 
 Initial Bsale fork snapshot on top of upstream Apache Superset `6.0.0`.
