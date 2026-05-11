@@ -17,6 +17,8 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+## [6.0.0-bsale.2] - 2026-05-11
+
 ### Added
 
 - **treemap**: hovering a node now shows the percentage relative to the
@@ -26,7 +28,25 @@ repository (e.g. version `6.0.0-bsale.1` is published as
   `% del total` is appended below, aligned in the same column as the parent
   percent. Useful for comparing nested segments across all top-level groups
   (e.g. comparing a segment's weight against the whole dataset rather than
-  only against its industry).
+  only against its industry). Validated visually in `bi-staging.bsale.io`
+  against the Peruvian active-companies dataset (18 industries, 102
+  segments, 1.585 companies).
+
+### Changed
+
+- **build**: `Makefile.bsale build-and-push-staging` now auto-writes
+  `staging.auto.tfvars` to the sibling `bsale-bi-staging/terraform/`
+  repository after pushing the image (path overridable via the
+  `TFVARS_PATH` variable). The companion change in `bsale-bi-staging`
+  converted the hardcoded `frontend_tag` in `ec2.tf` to a
+  `frontend_assets_tag` Terraform variable, so the staging deploy now
+  collapses from "edit source + apply" to:
+
+      make -f Makefile.bsale build-and-push-staging
+      cd ../bsale-bi-staging/terraform && terraform apply
+
+  Tags remain immutable (`:feat-<branch>-<sha>`) — trazability is
+  preserved, only the manual copy-paste step is automated away.
 
 ### Fixed
 
@@ -66,5 +86,6 @@ Initial Bsale fork snapshot on top of upstream Apache Superset `6.0.0`.
   base image pulled from ECR is compressed with zstd, and decompression fails
   without the tool present.
 
-[Unreleased]: https://github.com/aobispo-bsale/superset/compare/6.0.0-bsale.1...HEAD
+[Unreleased]: https://github.com/aobispo-bsale/superset/compare/6.0.0-bsale.2...HEAD
+[6.0.0-bsale.2]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.2
 [6.0.0-bsale.1]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.1
