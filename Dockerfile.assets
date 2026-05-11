@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1.7
+#
+# Minimal Docker image that contains ONLY the compiled frontend assets
+# of the Bsale fork (apache/superset + bsale/feat/* patches).
+#
+# Consumed by data-bi-platform/Dockerfile via:
+#   COPY --from=239630721544.dkr.ecr.us-east-1.amazonaws.com/superset-frontend-assets:<tag> \
+#        /assets /app/superset/static/assets
+#
+# Build locally:
+#   make build-and-push-prod TAG=initial
+#   make build-and-push-staging TAG=feat-X-$(git rev-parse --short HEAD)
+
+# ─── Stage 1: build frontend (discarded after stage 2) ────────────────────────
+FROM --platform=linux/arm64 node:20-bookworm-slim AS builder
+
+WORKDIR /repo
+
+# Cache npm install layer when only source changes
+COPY superset-frontend/package.json superset-frontend/package-lock.json ./superset-frontend/
+RUN cd superset-frontend && npm ci --prefer-offline --no-audit --no-fund
+
+# Copy source needed for build
+COPY superset-frontend/ ./superset-frontend/
+COPY superset/ ./superset/
+
+RUN cd superset-frontend && \
+    NODE_OPTIONS=--max_old_space_size=8192 npm run build
+
+# ─── Stage 2: minimal final image (this is what gets pushed) ──────────────────
+FROM scratch
+
+COPY --from=builder /repo/superset/static/assets /assets

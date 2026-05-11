@@ -1,0 +1,57 @@
+# Bsale fork — build and publish frontend assets to ECR.
+#
+# Separate from the upstream Apache Makefile to avoid conflicts on rebase.
+# Use:  make -f Makefile.bsale <target>
+#
+# Targets:
+#   ecr-login                    Login docker to ECR (one-time per session)
+#   build-and-push-staging       Build + push :feat-{branch}-{sha}
+#   build-and-push-prod          Build + push :6.0.0 + :6.0.0-{sha}
+#   print-vars                   Show resolved variables
+
+REGISTRY    ?= 239630721544.dkr.ecr.us-east-1.amazonaws.com
+REPO        ?= superset-frontend-assets
+AWS_REGION  ?= us-east-1
+PLATFORM    ?= linux/arm64
+
+GIT_SHA     := $(shell git rev-parse --short HEAD)
+GIT_BRANCH  := $(shell git rev-parse --abbrev-ref HEAD | sed 's|.*/||')
+TAG         ?= $(GIT_SHA)
+
+IMAGE       := $(REGISTRY)/$(REPO)
+
+.PHONY: help ecr-login build-and-push-staging build-and-push-prod print-vars
+
+help:
+	@echo "Bsale Makefile (use: make -f Makefile.bsale <target>)"
+	@echo ""
+	@echo "Targets:"
+	@echo "  ecr-login                    Login docker to ECR ($(REGISTRY))"
+	@echo "  build-and-push-staging       Build + push :feat-$(GIT_BRANCH)-$(GIT_SHA)"
+	@echo "  build-and-push-prod          Build + push :6.0.0 + :6.0.0-$(GIT_SHA)"
+	@echo "  print-vars                   Show resolved variables"
+
+print-vars:
+	@echo "REGISTRY    = $(REGISTRY)"
+	@echo "REPO        = $(REPO)"
+	@echo "AWS_REGION  = $(AWS_REGION)"
+	@echo "PLATFORM    = $(PLATFORM)"
+	@echo "GIT_SHA     = $(GIT_SHA)"
+	@echo "GIT_BRANCH  = $(GIT_BRANCH)"
+	@echo "TAG         = $(TAG)"
+	@echo "IMAGE       = $(IMAGE)"
+
+ecr-login:
+	@aws ecr get-login-password --region $(AWS_REGION) | \
+	  docker login --username AWS --password-stdin $(REGISTRY)
+
+build-and-push-staging: ecr-login
+	docker buildx build --platform $(PLATFORM) --push \
+	  -t $(IMAGE):feat-$(GIT_BRANCH)-$(GIT_SHA) \
+	  -f Dockerfile.assets .
+
+build-and-push-prod: ecr-login
+	docker buildx build --platform $(PLATFORM) --push \
+	  -t $(IMAGE):6.0.0 \
+	  -t $(IMAGE):6.0.0-$(GIT_SHA) \
+	  -f Dockerfile.assets .
