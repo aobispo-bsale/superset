@@ -25,6 +25,7 @@ import {
   NumberFormats,
   ValueFormatter,
   getValueFormatter,
+  t,
   tooltipHtml,
 } from '@superset-ui/core';
 import type { TreemapSeriesNodeItemOption } from 'echarts/types/src/chart/treemap/TreemapSeries';
@@ -87,21 +88,37 @@ export function formatTooltip({
   const { metricLabel, treePath } = extractTreePathInfo(treePathInfo);
   const percentFormatter = getNumberFormatter(NumberFormats.PERCENT_2_POINT);
 
-  let formattedPercent = '';
-  // the last item is current node, here we should find the parent node
+  // treePathInfo[0] is the root wrapper (carries the global total),
+  // the last index is the hovered node, the one before is its direct parent.
   const currentNode = treePathInfo[treePathInfo.length - 1];
   const parentNode = treePathInfo[treePathInfo.length - 2];
+  const rootNode = treePathInfo[0];
+
+  let formattedPercent = '';
   if (parentNode) {
     const percent: number = parentNode.value
       ? (currentNode.value as number) / (parentNode.value as number)
       : 0;
     formattedPercent = percentFormatter(percent);
   }
-  const row = [metricLabel, formattedValue];
-  if (formattedPercent) {
-    row.push(formattedPercent);
+
+  let formattedGlobalPercent = '';
+  if (rootNode && rootNode.value) {
+    const globalPercent =
+      (currentNode.value as number) / (rootNode.value as number);
+    formattedGlobalPercent = percentFormatter(globalPercent);
   }
-  return tooltipHtml([row], treePath.join(' ▸ '));
+
+  const primaryRow = [metricLabel, formattedValue];
+  if (formattedPercent) {
+    primaryRow.push(formattedPercent);
+  }
+  const rows: string[][] = [primaryRow];
+  if (formattedGlobalPercent) {
+    // empty middle cell aligns the global percent under the parent percent.
+    rows.push([t('% del total'), '', formattedGlobalPercent]);
+  }
+  return tooltipHtml(rows, treePath.join(' ▸ '));
 }
 
 export default function transformProps(

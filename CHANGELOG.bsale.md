@@ -17,6 +17,17 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+### Added
+
+- **treemap**: hovering a node now shows the percentage relative to the
+  **global total** (root of the tree) alongside the existing percentage
+  relative to the **parent group**. The tooltip stays compact: the original
+  row is unchanged (`metric / value / parent percent`) and a new row labelled
+  `% del total` is appended below, aligned in the same column as the parent
+  percent. Useful for comparing nested segments across all top-level groups
+  (e.g. comparing a segment's weight against the whole dataset rather than
+  only against its industry).
+
 ### Fixed
 
 - **sankey**: `nodeOrder` now pins the rendered node sequence. The previous
