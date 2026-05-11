@@ -40,6 +40,7 @@ export type EchartsTreemapFormData = QueryFormData & {
   labelPosition: LabelPositionEnum;
   showLabels: boolean;
   showUpperLabels: boolean;
+  hierarchicalColor: boolean;
   numberFormat: string;
   dateFormat: string;
   dashboardId?: number;
@@ -64,6 +65,7 @@ export const DEFAULT_FORM_DATA: Partial<EchartsTreemapFormData> = {
   numberFormat: 'SMART_NUMBER',
   showLabels: true,
   showUpperLabels: true,
+  hierarchicalColor: false,
   dateFormat: 'smart_date',
 };
 export interface TreemapSeriesCallbackDataParams extends CallbackDataParams {

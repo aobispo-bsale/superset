@@ -20,6 +20,10 @@
 import { TreePathInfo } from '../types';
 
 export const COLOR_SATURATION = [0.7, 0.4];
+// Wider saturation range used when hierarchicalColor is on, so children
+// inherited from the same parent are visibly distinct (large segments stay
+// saturated, small ones fade towards pale).
+export const HIERARCHICAL_COLOR_SATURATION = [0.3, 0.9];
 export const LABEL_FONTSIZE = 11;
 export const BORDER_WIDTH = 2;
 export const GAP_WIDTH = 2;

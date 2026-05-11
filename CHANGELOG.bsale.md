@@ -17,6 +17,18 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+### Added
+
+- **treemap**: new `Hierarchical color` opt-in control in the "Chart Options"
+  panel. When enabled (default OFF — opt-in for backward compatibility), only
+  top-level groupby nodes receive a colour from the categorical scheme, and
+  deeper nodes inherit their parent's hue. ECharts then varies saturation per
+  item using a wider range (`[0.3, 0.9]`) so all segments of the same parent
+  visually group together (e.g. every segment under "ALIMENTOS Y BEBIDAS"
+  shares the base orange, with larger segments saturated and smaller ones
+  pale). Especially useful with 2+ groupby levels — single-level groupby keeps
+  the original behaviour.
+
 ## [6.0.0-bsale.2] - 2026-05-11
 
 ### Added
