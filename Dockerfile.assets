@@ -14,6 +14,11 @@
 # ─── Stage 1: build frontend (discarded after stage 2) ────────────────────────
 FROM --platform=linux/arm64 node:20-bookworm-slim AS builder
 
+# System deps required by Node packages (simple-zstd shells out to `zstd` binary)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends zstd && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /repo
 
 # Cache npm install layer when only source changes
