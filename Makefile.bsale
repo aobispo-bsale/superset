@@ -20,6 +20,11 @@ TAG         ?= $(GIT_SHA)
 
 IMAGE       := $(REGISTRY)/$(REPO)
 
+# Path to the bsale-bi-staging Terraform tfvars file. Auto-written by
+# build-and-push-staging so `terraform apply` picks up the new image tag
+# without manually editing source. Override if the repos live elsewhere.
+TFVARS_PATH ?= ../bsale-bi-staging/terraform/staging.auto.tfvars
+
 .PHONY: help ecr-login build-and-push-staging build-and-push-prod print-vars
 
 help:
@@ -27,7 +32,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  ecr-login                    Login docker to ECR ($(REGISTRY))"
-	@echo "  build-and-push-staging       Build + push :feat-$(GIT_BRANCH)-$(GIT_SHA)"
+	@echo "  build-and-push-staging       Build + push :feat-$(GIT_BRANCH)-$(GIT_SHA) and write $(TFVARS_PATH)"
 	@echo "  build-and-push-prod          Build + push :6.0.0 + :6.0.0-$(GIT_SHA)"
 	@echo "  print-vars                   Show resolved variables"
 
@@ -40,6 +45,7 @@ print-vars:
 	@echo "GIT_BRANCH  = $(GIT_BRANCH)"
 	@echo "TAG         = $(TAG)"
 	@echo "IMAGE       = $(IMAGE)"
+	@echo "TFVARS_PATH = $(TFVARS_PATH)"
 
 ecr-login:
 	@aws ecr get-login-password --region $(AWS_REGION) | \
@@ -49,6 +55,13 @@ build-and-push-staging: ecr-login
 	docker buildx build --platform $(PLATFORM) --push \
 	  -t $(IMAGE):feat-$(GIT_BRANCH)-$(GIT_SHA) \
 	  -f Dockerfile.assets .
+	@mkdir -p $(dir $(TFVARS_PATH))
+	@printf 'frontend_assets_tag = "feat-%s-%s"\n' "$(GIT_BRANCH)" "$(GIT_SHA)" > $(TFVARS_PATH)
+	@echo ""
+	@echo "Pushed: $(IMAGE):feat-$(GIT_BRANCH)-$(GIT_SHA)"
+	@echo "Wrote:  $(TFVARS_PATH)"
+	@echo ""
+	@echo "Next:   cd $(dir $(TFVARS_PATH)) && terraform apply"
 
 build-and-push-prod: ecr-login
 	docker buildx build --platform $(PLATFORM) --push \
