@@ -17,6 +17,8 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+## [6.0.0-bsale.3] - 2026-05-11
+
 ### Added
 
 - **treemap**: new `Hierarchical color` opt-in control in the "Chart Options"
@@ -98,6 +100,7 @@ Initial Bsale fork snapshot on top of upstream Apache Superset `6.0.0`.
   base image pulled from ECR is compressed with zstd, and decompression fails
   without the tool present.
 
-[Unreleased]: https://github.com/aobispo-bsale/superset/compare/6.0.0-bsale.2...HEAD
+[Unreleased]: https://github.com/aobispo-bsale/superset/compare/6.0.0-bsale.3...HEAD
+[6.0.0-bsale.3]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.3
 [6.0.0-bsale.2]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.2
 [6.0.0-bsale.1]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.1
