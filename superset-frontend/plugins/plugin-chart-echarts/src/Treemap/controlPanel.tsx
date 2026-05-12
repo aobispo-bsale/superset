@@ -28,8 +28,14 @@ import {
 } from '@superset-ui/chart-controls';
 import { DEFAULT_FORM_DATA } from './types';
 
-const { labelType, numberFormat, showLabels, showUpperLabels, dateFormat } =
-  DEFAULT_FORM_DATA;
+const {
+  labelType,
+  numberFormat,
+  showLabels,
+  showUpperLabels,
+  hierarchicalColor,
+  dateFormat,
+} = DEFAULT_FORM_DATA;
 
 const config: ControlPanelConfig = {
   controlPanelSections: [
@@ -49,6 +55,23 @@ const config: ControlPanelConfig = {
       expanded: true,
       controlSetRows: [
         ['color_scheme'],
+        [
+          {
+            name: 'hierarchical_color',
+            config: {
+              type: 'CheckboxControl',
+              label: t('Hierarchical color'),
+              renderTrigger: true,
+              default: hierarchicalColor,
+              description: t(
+                'Color child nodes by inheriting their parent node\'s color, ' +
+                  'varying only the saturation by value. Useful with 2+ groupby ' +
+                  'levels — visually groups all children of the same parent ' +
+                  '(e.g. all segments of the same industry share the base hue).',
+              ),
+            },
+          },
+        ],
         [<ControlSubSectionHeader>{t('Labels')}</ControlSubSectionHeader>],
         [
           {

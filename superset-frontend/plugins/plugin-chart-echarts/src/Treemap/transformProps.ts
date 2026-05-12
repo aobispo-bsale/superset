@@ -42,6 +42,7 @@ import {
 import { formatSeriesName, getColtypesMapping } from '../utils/series';
 import {
   COLOR_SATURATION,
+  HIERARCHICAL_COLOR_SATURATION,
   BORDER_WIDTH,
   GAP_WIDTH,
   LABEL_FONTSIZE,
@@ -153,6 +154,7 @@ export default function transformProps(
     dateFormat,
     showLabels,
     showUpperLabels,
+    hierarchicalColor,
     dashboardId,
     sliceId,
   }: EchartsTreemapFormData = {
@@ -185,7 +187,7 @@ export default function transformProps(
     borderColor: theme.colorBgBase,
     borderWidth: 1,
   };
-  const traverse = (treeNodes: TreeNode[], path: string[]) =>
+  const traverse = (treeNodes: TreeNode[], path: string[], depth = 0) =>
     treeNodes.map(treeNode => {
       const { name: nodeName, value, groupBy } = treeNode;
       const name = formatSeriesName(nodeName, {
@@ -195,13 +197,19 @@ export default function transformProps(
         }),
       });
       const newPath = path.concat(name);
+      // When hierarchicalColor is on, only top-level nodes (depth === 0)
+      // carry an explicit color from the scheme — deeper nodes omit `color`
+      // so ECharts inherits the parent hue and varies saturation per item.
+      const assignOwnColor = !hierarchicalColor || depth === 0;
       let item: TreemapSeriesNodeItemOption = {
         name,
         value,
-        colorSaturation: COLOR_SATURATION,
+        colorSaturation: hierarchicalColor
+          ? HIERARCHICAL_COLOR_SATURATION
+          : COLOR_SATURATION,
         itemStyle: {
           borderColor: BORDER_COLOR,
-          color: colorFn(name, sliceId),
+          ...(assignOwnColor && { color: colorFn(name, sliceId) }),
           borderWidth: BORDER_WIDTH,
           gapWidth: GAP_WIDTH,
         },
@@ -209,7 +217,7 @@ export default function transformProps(
       if (treeNode.children?.length) {
         item = {
           ...item,
-          children: traverse(treeNode.children, newPath),
+          children: traverse(treeNode.children, newPath, depth + 1),
         };
       } else {
         const joinedName = newPath.join(',');

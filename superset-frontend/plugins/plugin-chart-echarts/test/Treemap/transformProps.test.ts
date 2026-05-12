@@ -139,3 +139,76 @@ describe('Treemap formatTooltip', () => {
     expect(html).not.toContain('% del total');
   });
 });
+
+describe('Treemap hierarchical color', () => {
+  const baseData = [
+    { foo: 'IndustriaA', bar: 'segA1', sum__num: 10 },
+    { foo: 'IndustriaA', bar: 'segA2', sum__num: 5 },
+    { foo: 'IndustriaB', bar: 'segB1', sum__num: 3 },
+  ];
+  const baseFormData = {
+    colorScheme: 'bnbColors',
+    datasource: '3__table',
+    granularity_sqla: 'ds',
+    metric: 'sum__num',
+    groupby: ['foo', 'bar'],
+  };
+
+  const buildChartProps = (overrides: Record<string, unknown> = {}) =>
+    new ChartProps({
+      formData: { ...baseFormData, ...overrides },
+      width: 800,
+      height: 600,
+      queriesData: [{ data: baseData }],
+      theme: supersetTheme,
+    }) as EchartsTreemapChartProps;
+
+  // Drill into the rendered tree: ECharts data[0] is the metric-label root
+  // wrapper; its `children` are the top-level groupby nodes (the industries),
+  // and their `children` are the leaves (the segments).
+  const getNodes = (chartProps: EchartsTreemapChartProps) => {
+    const result = transformProps(chartProps);
+    const series = (result.echartOptions as any).series[0];
+    const root = series.data[0];
+    const topLevel = root.children ?? [];
+    const leaves = topLevel.flatMap((n: any) => n.children ?? []);
+    return { topLevel, leaves };
+  };
+
+  it('default (hierarchical_color off): every node carries its own color', () => {
+    const { topLevel, leaves } = getNodes(buildChartProps());
+
+    expect(topLevel.length).toBeGreaterThan(0);
+    expect(leaves.length).toBeGreaterThan(0);
+    expect(topLevel.every((n: any) => n.itemStyle?.color)).toBe(true);
+    expect(leaves.every((n: any) => n.itemStyle?.color)).toBe(true);
+  });
+
+  it('on: top-level nodes get colors, leaves omit color so ECharts inherits from parent', () => {
+    const { topLevel, leaves } = getNodes(
+      buildChartProps({ hierarchicalColor: true }),
+    );
+
+    expect(topLevel.length).toBeGreaterThan(0);
+    expect(leaves.length).toBeGreaterThan(0);
+    // top-level nodes still receive a color from the scheme
+    expect(topLevel.every((n: any) => n.itemStyle?.color)).toBe(true);
+    // leaves intentionally omit color so ECharts inherits from the parent
+    expect(leaves.every((n: any) => n.itemStyle?.color === undefined)).toBe(
+      true,
+    );
+    // wider saturation range applied everywhere to make the variation visible
+    expect(topLevel.every((n: any) => n.colorSaturation[0] === 0.3)).toBe(true);
+    expect(leaves.every((n: any) => n.colorSaturation[1] === 0.9)).toBe(true);
+  });
+
+  it('on with single groupby level: top-level nodes still receive a color (no breakage)', () => {
+    const { topLevel, leaves } = getNodes(
+      buildChartProps({ hierarchicalColor: true, groupby: ['foo'] }),
+    );
+
+    expect(topLevel.length).toBeGreaterThan(0);
+    expect(leaves.length).toBe(0);
+    expect(topLevel.every((n: any) => n.itemStyle?.color)).toBe(true);
+  });
+});
