@@ -592,7 +592,7 @@ describe('horizontal orientation', () => {
       intervalEndColumn: 'end',
       descriptionColumns: [],
       style: AnnotationStyle.Dashed,
-      value: 'interval-annotation-id',
+      value: 0,
     };
     const intervalAnnotationData = {
       'My Interval': {
