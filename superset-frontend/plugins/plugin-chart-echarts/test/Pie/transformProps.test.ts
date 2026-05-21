@@ -372,6 +372,243 @@ describe('Total value positioning with legends', () => {
   });
 });
 
+// ─── Helper for dynamic-total tests ─────────────────────────────────────────
+function buildDynamicTotalChartProps({
+  data,
+  filterState,
+  legendState,
+  hooks,
+  showTotal = true,
+  thresholdForOther,
+}: {
+  data: Array<{
+    category: string;
+    sum__num: number;
+    sum__num__contribution?: number;
+  }>;
+  filterState?: { selectedValues?: string[] };
+  legendState?: Record<string, boolean>;
+  hooks?: Record<string, unknown>;
+  showTotal?: boolean;
+  thresholdForOther?: number;
+}): EchartsPieChartProps {
+  const formData: SqlaFormData = {
+    colorScheme: 'bnbColors',
+    datasource: '3__table',
+    granularity_sqla: 'ds',
+    metric: 'sum__num',
+    groupby: ['category'],
+    viz_type: 'pie',
+    show_total: showTotal,
+    donut: true,
+    ...(thresholdForOther !== undefined
+      ? { threshold_for_other: thresholdForOther }
+      : {}),
+  };
+  return new ChartProps({
+    formData,
+    width: 800,
+    height: 600,
+    queriesData: [{ data }],
+    theme: supersetTheme,
+    filterState: filterState ?? {},
+    legendState,
+    hooks: hooks ?? {},
+  }) as EchartsPieChartProps;
+}
+
+function getTotalText(props: EchartsPieChartProps): string {
+  const transformed = transformProps(props);
+  const graphic = transformed.echartOptions.graphic as any;
+  return graphic?.style?.text ?? '';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Dynamic total value', () => {
+  const AB = [
+    { category: 'A', sum__num: 10, sum__num__contribution: 0.4 },
+    { category: 'B', sum__num: 15, sum__num__contribution: 0.6 },
+  ];
+
+  it('Scenario 1: initial render — no filters, total equals sum of all slices', () => {
+    const props = buildDynamicTotalChartProps({ data: AB });
+    const text = getTotalText(props);
+    // Total should equal 25 (10 + 15)
+    expect(text).toContain('25');
+    expect(text).not.toContain('10');
+  });
+
+  it('Scenario 4: cross-filter excludes filtered slice from total', () => {
+    // selectedValues=['A'] means A is the active/selected slice;
+    // B is cross-filtered (isFiltered=true for B) → only A contributes
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      filterState: { selectedValues: ['A'] },
+    });
+    const text = getTotalText(props);
+    // Total should equal 10 (only A), NOT 25
+    expect(text).not.toContain('25');
+    expect(text).toContain('10');
+  });
+
+  it('Scenario 2: legend toggle off — hidden slice excluded from total', () => {
+    // B is toggled off in the legend → only A (10) should count
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      legendState: { A: true, B: false },
+    });
+    const text = getTotalText(props);
+    expect(text).not.toContain('25');
+    expect(text).toContain('10');
+  });
+
+  it('Scenario 3: legend toggle back on — total restored', () => {
+    // Both A and B visible → full total 25
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      legendState: { A: true, B: true },
+    });
+    const text = getTotalText(props);
+    expect(text).toContain('25');
+  });
+
+  it('Scenario 6: Other bucket hidden when its legend entry is off', () => {
+    // Data: values 1,2,3,4,5; threshold=20% → items 1 (6.7%) and 2 (13.3%)
+    // are merged into Other (otherSum=3). Remaining shown slices: 3+4+5=12.
+    // When Other legend entry is hidden, total should be 12, not 15.
+    const otherData = [
+      { category: 'foo 1', sum__num: 1, sum__num__contribution: 1 / 15 },
+      { category: 'foo 2', sum__num: 2, sum__num__contribution: 2 / 15 },
+      { category: 'foo 3', sum__num: 3, sum__num__contribution: 3 / 15 },
+      { category: 'foo 4', sum__num: 4, sum__num__contribution: 4 / 15 },
+      { category: 'foo 5', sum__num: 5, sum__num__contribution: 5 / 15 },
+    ];
+    const props = buildDynamicTotalChartProps({
+      data: otherData,
+      thresholdForOther: 20,
+      legendState: { Other: false },
+    });
+    const text = getTotalText(props);
+    // otherSum=3 excluded, shown slices 3+4+5=12
+    expect(text).not.toContain('15');
+    expect(text).toContain('12');
+  });
+
+  it('Scenario 5: cross-filter + legend hide different slices — no double-subtraction', () => {
+    // A=10, B=15, C=20.
+    // selectedValues=['B','C'] → A is NOT in selectedValues → isFiltered=true for A.
+    // legendState.B=false → B hidden by legend.
+    // Only C (20) contributes: A excluded by cross-filter, B excluded by legend.
+    const ABC = [
+      { category: 'A', sum__num: 10, sum__num__contribution: 10 / 45 },
+      { category: 'B', sum__num: 15, sum__num__contribution: 15 / 45 },
+      { category: 'C', sum__num: 20, sum__num__contribution: 20 / 45 },
+    ];
+    const props = buildDynamicTotalChartProps({
+      data: ABC,
+      filterState: { selectedValues: ['B', 'C'] },
+      legendState: { A: true, B: false, C: true },
+    });
+    const text = getTotalText(props);
+    // Only C (20) contributes; A excluded by cross-filter, B excluded by legend
+    expect(text).toContain('20');
+    expect(text).not.toContain('45');
+    expect(text).not.toContain('35'); // A+C must not appear
+    expect(text).not.toContain('25'); // B+C must not appear
+  });
+
+  it('Scenario 5 sub-case: slice hidden by both signals excluded exactly once', () => {
+    // A is cross-filtered (selectedValues=['B']) AND legendState.A=false
+    // → A excluded exactly once; total = B = 15
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      filterState: { selectedValues: ['B'] },
+      legendState: { A: false, B: true },
+    });
+    const text = getTotalText(props);
+    expect(text).toContain('15');
+    expect(text).not.toContain('25');
+    expect(text).not.toContain('-');
+  });
+
+  it('Scenario 7: re-render with same state produces identical total — function is pure', () => {
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      filterState: { selectedValues: ['A'] },
+      legendState: { A: true, B: false },
+    });
+    const text1 = getTotalText(props);
+    const text2 = getTotalText(props);
+    expect(text1).toBe(text2);
+  });
+
+  it('treats undefined legendState as all-visible — no regression', () => {
+    // legendState omitted entirely → same as baseline
+    const props = buildDynamicTotalChartProps({ data: AB });
+    const text = getTotalText(props);
+    expect(text).toContain('25');
+  });
+
+  it('returns onLegendStateChanged from transformProps', () => {
+    const onLegendStateChanged = jest.fn();
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      hooks: { onLegendStateChanged },
+    });
+    const transformed = transformProps(props);
+    expect(transformed.onLegendStateChanged).toBe(onLegendStateChanged);
+  });
+
+  it('Scenario 8: showTotal=false produces no graphic element', () => {
+    // Even with legendState hiding a slice and a cross-filter active,
+    // showTotal=false must result in no graphic (undefined/null/empty).
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      showTotal: false,
+      legendState: { A: false },
+      filterState: { selectedValues: ['B'] },
+    });
+    const transformed = transformProps(props);
+    const { graphic } = transformed.echartOptions as any;
+    // graphic should be absent, null, undefined, or an empty array — not an
+    // object with a style.text property.
+    const hasText =
+      graphic && !Array.isArray(graphic) && graphic?.style?.text !== undefined;
+    expect(hasText).toBeFalsy();
+  });
+
+  it('Scenario 8 sub-case: onLegendStateChanged does not interact with graphic when showTotal=false', () => {
+    // onLegendStateChanged is a pass-through; calling it must not throw even
+    // when showTotal=false means there is no graphic to update.
+    const onLegendStateChanged = jest.fn();
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      showTotal: false,
+      hooks: { onLegendStateChanged },
+    });
+    expect(() => {
+      transformProps(props);
+    }).not.toThrow();
+    // The function is returned correctly so EchartsPie can call it on events
+    const transformed = transformProps(props);
+    expect(transformed.onLegendStateChanged).toBe(onLegendStateChanged);
+  });
+
+  it('regression: echartOptions.legend.selected mirrors legendState so ECharts setOption(_, notMerge=true) preserves user toggles', () => {
+    // Without this, a single legend click is silently undone on re-render because
+    // setOption(themedEchartOptions, true) wipes ECharts legend state and our
+    // options carried no `selected` field. Users had to click twice.
+    const legendState = { A: true, B: false };
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      legendState,
+    });
+    const transformed = transformProps(props);
+    const legend = transformed.echartOptions.legend as any;
+    expect(legend.selected).toEqual(legendState);
+  });
+});
+
 describe('Other category', () => {
   const defaultFormData: SqlaFormData = {
     colorScheme: 'bnbColors',

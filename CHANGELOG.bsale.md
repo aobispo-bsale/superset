@@ -17,6 +17,19 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+### Fixed
+
+- **pie**: the donut center total ("Total: X") now recomputes dynamically to
+  reflect only currently visible slices. Previously it was computed once at
+  transform time and ignored both cross-filter exclusions (`isFiltered`) and
+  legend toggles, leading to a static total that misled the viewer when slices
+  were hidden. The fix wires `legendState` into `transformProps` (following the
+  Gantt/Histogram pattern), guards `totalValue` accumulation with both signals
+  (`!isFiltered && legendState[name] !== false`), applies the same guard to the
+  "Other" bucket, and registers `legendselectchanged` / `legendselectall` /
+  `legendinverseselect` handlers on the chart to push state changes back through
+  `onLegendStateChanged`. Center total now stays consistent with what's rendered.
+
 ## [6.0.0-bsale.3] - 2026-05-11
 
 ### Added

@@ -19,11 +19,30 @@
 import { PieChartTransformedProps } from './types';
 import Echart from '../components/Echart';
 import { allEventHandlers } from '../utils/eventHandlers';
+import { EventHandlers } from '../types';
 
 export default function EchartsPie(props: PieChartTransformedProps) {
-  const { height, width, echartOptions, selectedValues, refs } = props;
+  const {
+    height,
+    width,
+    echartOptions,
+    selectedValues,
+    refs,
+    onLegendStateChanged,
+  } = props;
 
-  const eventHandlers = allEventHandlers(props);
+  const eventHandlers: EventHandlers = {
+    ...allEventHandlers(props),
+    legendselectchanged: payload => {
+      onLegendStateChanged?.(payload.selected);
+    },
+    legendselectall: payload => {
+      onLegendStateChanged?.(payload.selected);
+    },
+    legendinverseselect: payload => {
+      onLegendStateChanged?.(payload.selected);
+    },
+  };
 
   return (
     <Echart
