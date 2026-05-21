@@ -17,6 +17,8 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+## [6.0.0-bsale.4] - 2026-05-21
+
 ### Fixed
 
 - **pie**: the donut center total ("Total: X") now recomputes dynamically to
@@ -28,7 +30,12 @@ repository (e.g. version `6.0.0-bsale.1` is published as
   (`!isFiltered && legendState[name] !== false`), applies the same guard to the
   "Other" bucket, and registers `legendselectchanged` / `legendselectall` /
   `legendinverseselect` handlers on the chart to push state changes back through
-  `onLegendStateChanged`. Center total now stays consistent with what's rendered.
+  `onLegendStateChanged`. Also forwards `legendState` to `getLegendProps` so
+  `echartOptions.legend.selected` mirrors React state — without this, the base
+  `setOption(_, notMerge=true)` re-render wipes ECharts' internal legend state
+  on every toggle and a single click was silently undone (users had to click
+  twice to hide a slice). Center total now stays consistent with what's
+  rendered, on the first click.
 
 ## [6.0.0-bsale.3] - 2026-05-11
 
