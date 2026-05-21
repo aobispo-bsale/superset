@@ -262,7 +262,7 @@ export default function transformProps(
       filterState.selectedValues && !filterState.selectedValues.includes(name);
     const value = datum[metricLabel];
 
-    if (typeof value === 'number' || typeof value === 'string') {
+    if (!isFiltered && (typeof value === 'number' || typeof value === 'string')) {
       totalValue += convertInteger(value);
     }
 
