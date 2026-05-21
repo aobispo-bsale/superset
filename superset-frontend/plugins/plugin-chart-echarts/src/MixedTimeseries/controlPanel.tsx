@@ -33,7 +33,7 @@ import {
 } from '@superset-ui/chart-controls';
 
 import { DEFAULT_FORM_DATA } from './types';
-import { EchartsTimeseriesSeriesType } from '../Timeseries/types';
+import { EchartsTimeseriesSeriesType, OrientationType } from '../Timeseries/types';
 import {
   legendSection,
   minorTicks,
@@ -59,6 +59,7 @@ const {
   truncateYAxis,
   yAxisBounds,
   yAxisIndex,
+  orientation,
 } = DEFAULT_FORM_DATA;
 
 function createQuerySection(
@@ -343,6 +344,28 @@ const config: ControlPanelConfig = {
     createAdvancedAnalyticsSection(t('Advanced analytics Query B'), '_b'),
     sections.annotationsAndLayersControls,
     sections.titleControls,
+    {
+      label: t('Chart Orientation'),
+      expanded: true,
+      controlSetRows: [
+        [
+          {
+            name: 'orientation',
+            config: {
+              type: 'RadioButtonControl',
+              renderTrigger: true,
+              label: t('Chart orientation'),
+              default: orientation,
+              options: [
+                [OrientationType.Vertical, t('Vertical')],
+                [OrientationType.Horizontal, t('Horizontal')],
+              ],
+              description: t('Orientation of the chart'),
+            },
+          },
+        ],
+      ],
+    },
     {
       label: t('Chart Options'),
       expanded: true,

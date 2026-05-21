@@ -56,6 +56,7 @@ import {
   ForecastSeriesEnum,
   Refs,
 } from '../types';
+import { OrientationType } from '../Timeseries/types';
 import { parseAxisBound } from '../utils/controls';
 import {
   dedupSeries,
@@ -217,8 +218,10 @@ export default function transformProps(
     showQueryIdentifiers = false,
     metrics = [],
     metricsB = [],
+    orientation,
   }: EchartsMixedTimeseriesFormData = { ...DEFAULT_FORM_DATA, ...formData };
 
+  const isHorizontal = orientation === OrientationType.Horizontal;
   const refs: Refs = {};
   const colorScale = CategoricalColorNamespace.getScale(colorScheme as string);
 
@@ -561,10 +564,96 @@ export default function transformProps(
     yAxisTitlePosition,
     convertInteger(yAxisTitleMargin),
     convertInteger(xAxisTitleMargin),
+    isHorizontal,
   );
 
   const { setDataMask = () => {}, onContextMenu } = hooks;
   const alignTicks = yAxisIndex !== yAxisIndexB;
+
+  // Build axis objects as mutable bindings so we can swap them for horizontal mode
+  let xAxisObj: any = {
+    type: xAxisType,
+    name: xAxisTitle,
+    nameGap: convertInteger(xAxisTitleMargin),
+    nameLocation: 'middle',
+    axisLabel: {
+      formatter: xAxisFormatter,
+      rotate: xAxisLabelRotation,
+      interval: xAxisLabelInterval,
+    },
+    minorTick: { show: minorTicks },
+    minInterval:
+      xAxisType === AxisType.Time && timeGrainSqla
+        ? TIMEGRAIN_TO_TIMESTAMP[
+            timeGrainSqla as keyof typeof TIMEGRAIN_TO_TIMESTAMP
+          ]
+        : 0,
+    ...getMinAndMaxFromBounds(
+      xAxisType,
+      truncateXAxis,
+      xAxisMin,
+      xAxisMax,
+      seriesType === EchartsTimeseriesSeriesType.Bar ||
+        seriesTypeB === EchartsTimeseriesSeriesType.Bar
+        ? EchartsTimeseriesSeriesType.Bar
+        : undefined,
+    ),
+  };
+
+  let yAxisObj: any = [
+    {
+      ...defaultYAxis,
+      type: logAxis ? 'log' : 'value',
+      min: yAxisMin,
+      max: yAxisMax,
+      minorTick: { show: minorTicks },
+      minorSplitLine: { show: minorSplitLine },
+      axisLabel: {
+        formatter: getYAxisFormatter(
+          metrics,
+          !!contributionMode,
+          customFormatters,
+          formatter,
+          yAxisFormat,
+        ),
+      },
+      scale: truncateYAxis,
+      name: yAxisTitle,
+      nameGap: convertInteger(yAxisTitleMargin),
+      nameLocation: yAxisTitlePosition === 'Left' ? 'middle' : 'end',
+      alignTicks,
+    },
+    {
+      ...defaultYAxis,
+      type: logAxisSecondary ? 'log' : 'value',
+      min: minSecondary,
+      max: maxSecondary,
+      minorTick: { show: minorTicks },
+      splitLine: { show: false },
+      minorSplitLine: { show: minorSplitLine },
+      axisLabel: {
+        formatter: getYAxisFormatter(
+          metricsB,
+          !!contributionMode,
+          customFormattersSecondary,
+          formatterSecondary,
+          yAxisFormatSecondary,
+        ),
+      },
+      scale: truncateYAxis,
+      name: yAxisTitleSecondary,
+      alignTicks,
+    },
+  ];
+
+  if (isHorizontal) {
+    // Swap: category axis moves to yAxis (scalar), value axes move to xAxis (array)
+    [xAxisObj, yAxisObj] = [yAxisObj, xAxisObj];
+    // Place the two value axes: primary at bottom, secondary at top
+    xAxisObj[0] = { ...xAxisObj[0], position: 'bottom' };
+    xAxisObj[1] = { ...xAxisObj[1], position: 'top' };
+    // getPadding already swaps legend-margin placement via isHorizontal; no further swap needed
+  }
 
   const echartOptions: EChartsCoreOption = {
     useUTC: true,
@@ -572,79 +661,8 @@ export default function transformProps(
       ...defaultGrid,
       ...chartPadding,
     },
-    xAxis: {
-      type: xAxisType,
-      name: xAxisTitle,
-      nameGap: convertInteger(xAxisTitleMargin),
-      nameLocation: 'middle',
-      axisLabel: {
-        formatter: xAxisFormatter,
-        rotate: xAxisLabelRotation,
-        interval: xAxisLabelInterval,
-      },
-      minorTick: { show: minorTicks },
-      minInterval:
-        xAxisType === AxisType.Time && timeGrainSqla
-          ? TIMEGRAIN_TO_TIMESTAMP[
-              timeGrainSqla as keyof typeof TIMEGRAIN_TO_TIMESTAMP
-            ]
-          : 0,
-      ...getMinAndMaxFromBounds(
-        xAxisType,
-        truncateXAxis,
-        xAxisMin,
-        xAxisMax,
-        seriesType === EchartsTimeseriesSeriesType.Bar ||
-          seriesTypeB === EchartsTimeseriesSeriesType.Bar
-          ? EchartsTimeseriesSeriesType.Bar
-          : undefined,
-      ),
-    },
-    yAxis: [
-      {
-        ...defaultYAxis,
-        type: logAxis ? 'log' : 'value',
-        min: yAxisMin,
-        max: yAxisMax,
-        minorTick: { show: minorTicks },
-        minorSplitLine: { show: minorSplitLine },
-        axisLabel: {
-          formatter: getYAxisFormatter(
-            metrics,
-            !!contributionMode,
-            customFormatters,
-            formatter,
-            yAxisFormat,
-          ),
-        },
-        scale: truncateYAxis,
-        name: yAxisTitle,
-        nameGap: convertInteger(yAxisTitleMargin),
-        nameLocation: yAxisTitlePosition === 'Left' ? 'middle' : 'end',
-        alignTicks,
-      },
-      {
-        ...defaultYAxis,
-        type: logAxisSecondary ? 'log' : 'value',
-        min: minSecondary,
-        max: maxSecondary,
-        minorTick: { show: minorTicks },
-        splitLine: { show: false },
-        minorSplitLine: { show: minorSplitLine },
-        axisLabel: {
-          formatter: getYAxisFormatter(
-            metricsB,
-            !!contributionMode,
-            customFormattersSecondary,
-            formatterSecondary,
-            yAxisFormatSecondary,
-          ),
-        },
-        scale: truncateYAxis,
-        name: yAxisTitleSecondary,
-        alignTicks,
-      },
-    ],
+    xAxis: xAxisObj,
+    yAxis: yAxisObj,
     tooltip: {
       ...getDefaultTooltip(refs),
       show: !inContextMenu,
