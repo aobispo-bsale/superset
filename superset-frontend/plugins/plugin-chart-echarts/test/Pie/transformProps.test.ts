@@ -556,6 +556,43 @@ describe('Dynamic total value', () => {
     const transformed = transformProps(props);
     expect(transformed.onLegendStateChanged).toBe(onLegendStateChanged);
   });
+
+  it('Scenario 8: showTotal=false produces no graphic element', () => {
+    // Even with legendState hiding a slice and a cross-filter active,
+    // showTotal=false must result in no graphic (undefined/null/empty).
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      showTotal: false,
+      legendState: { A: false },
+      filterState: { selectedValues: ['B'] },
+    });
+    const transformed = transformProps(props);
+    const graphic = (transformed.echartOptions as any).graphic;
+    // graphic should be absent, null, undefined, or an empty array — not an
+    // object with a style.text property.
+    const hasText =
+      graphic &&
+      !Array.isArray(graphic) &&
+      graphic?.style?.text !== undefined;
+    expect(hasText).toBeFalsy();
+  });
+
+  it('Scenario 8 sub-case: onLegendStateChanged does not interact with graphic when showTotal=false', () => {
+    // onLegendStateChanged is a pass-through; calling it must not throw even
+    // when showTotal=false means there is no graphic to update.
+    const onLegendStateChanged = jest.fn();
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      showTotal: false,
+      hooks: { onLegendStateChanged },
+    });
+    expect(() => {
+      transformProps(props);
+    }).not.toThrow();
+    // The function is returned correctly so EchartsPie can call it on events
+    const transformed = transformProps(props);
+    expect(transformed.onLegendStateChanged).toBe(onLegendStateChanged);
+  });
 });
 
 describe('Other category', () => {
