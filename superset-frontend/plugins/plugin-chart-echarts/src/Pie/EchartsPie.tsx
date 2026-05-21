@@ -22,8 +22,14 @@ import { allEventHandlers } from '../utils/eventHandlers';
 import { EventHandlers } from '../types';
 
 export default function EchartsPie(props: PieChartTransformedProps) {
-  const { height, width, echartOptions, selectedValues, refs, onLegendStateChanged } =
-    props;
+  const {
+    height,
+    width,
+    echartOptions,
+    selectedValues,
+    refs,
+    onLegendStateChanged,
+  } = props;
 
   const eventHandlers: EventHandlers = {
     ...allEventHandlers(props),

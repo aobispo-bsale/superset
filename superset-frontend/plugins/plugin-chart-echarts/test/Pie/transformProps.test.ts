@@ -381,7 +381,11 @@ function buildDynamicTotalChartProps({
   showTotal = true,
   thresholdForOther,
 }: {
-  data: Array<{ category: string; sum__num: number; sum__num__contribution?: number }>;
+  data: Array<{
+    category: string;
+    sum__num: number;
+    sum__num__contribution?: number;
+  }>;
   filterState?: { selectedValues?: string[] };
   legendState?: Record<string, boolean>;
   hooks?: Record<string, unknown>;
@@ -413,9 +417,7 @@ function buildDynamicTotalChartProps({
   }) as EchartsPieChartProps;
 }
 
-function getTotalText(
-  props: EchartsPieChartProps,
-): string {
+function getTotalText(props: EchartsPieChartProps): string {
   const transformed = transformProps(props);
   const graphic = transformed.echartOptions.graphic as any;
   return graphic?.style?.text ?? '';
@@ -567,13 +569,11 @@ describe('Dynamic total value', () => {
       filterState: { selectedValues: ['B'] },
     });
     const transformed = transformProps(props);
-    const graphic = (transformed.echartOptions as any).graphic;
+    const { graphic } = transformed.echartOptions as any;
     // graphic should be absent, null, undefined, or an empty array — not an
     // object with a style.text property.
     const hasText =
-      graphic &&
-      !Array.isArray(graphic) &&
-      graphic?.style?.text !== undefined;
+      graphic && !Array.isArray(graphic) && graphic?.style?.text !== undefined;
     expect(hasText).toBeFalsy();
   });
 

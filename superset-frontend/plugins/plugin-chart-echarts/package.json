@@ -23,6 +23,9 @@
     "esm",
     "lib"
   ],
+  "devDependencies": {
+    "@testing-library/react": "*"
+  },
   "dependencies": {
     "@types/react-redux": "^7.1.34",
     "d3-array": "^1.2.0",

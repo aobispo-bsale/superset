@@ -16,35 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import React from 'react';
 import { render } from '@testing-library/react';
 import EchartsPie from '../../src/Pie/EchartsPie';
 import { PieChartTransformedProps } from '../../src/Pie/types';
 import { EventHandlers } from '../../src/types';
 
 // ---------------------------------------------------------------------------
-// Capture slot for eventHandlers — written by the mock on each render.
+// Capture slot — written by the Echart mock on each render.
+// Prefixed with "mock" so jest.mock() hoisting allows it.
 // ---------------------------------------------------------------------------
-const mockEchartProps: { eventHandlers?: EventHandlers } = {};
+const mockCapturedProps: { eventHandlers?: EventHandlers } = {};
 
 // ---------------------------------------------------------------------------
 // Mock the heavy Echart wrapper so tests never touch ECharts DOM / Redux.
-// Use require() inside the factory to avoid the out-of-scope variable error.
+// Plain function component avoids React.forwardRef in the factory scope.
 // ---------------------------------------------------------------------------
-jest.mock('../../src/components/Echart', () => {
-  const mockReact = require('react');
-  return {
-    __esModule: true,
-    default: mockReact.forwardRef((props: any, _ref: any) => {
-      // Write captured props into module-level object.
-      // We reach it via the closure over the module scope object reference.
-      // Jest hoists jest.mock() but the object reference itself is safe to
-      // mutate because it is not re-created between tests.
-      (global as any).__mockEchartLastProps = props;
-      return mockReact.createElement('div', { 'data-testid': 'echart-mock' });
-    }),
-  };
-});
+jest.mock('../../src/components/Echart', () => ({
+  __esModule: true,
+  // eslint-disable-next-line react/display-name
+  default(props: any) {
+    mockCapturedProps.eventHandlers = props.eventHandlers;
+    return null;
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Minimal props factory — only the fields EchartsPie actually reads
@@ -92,36 +86,32 @@ function buildProps(
   } as unknown as PieChartTransformedProps;
 }
 
-function getLastEventHandlers(): EventHandlers {
-  return (global as any).__mockEchartLastProps?.eventHandlers;
-}
-
 // ---------------------------------------------------------------------------
 // Cycle 4: event handler wiring assertions
 // ---------------------------------------------------------------------------
 describe('EchartsPie — legend event handler wiring', () => {
   beforeEach(() => {
-    (global as any).__mockEchartLastProps = undefined;
+    mockCapturedProps.eventHandlers = undefined;
   });
 
   it('task 4.1 — passes legendselectchanged, legendselectall, legendinverseselect handlers to Echart wrapper', () => {
     render(<EchartsPie {...buildProps()} />);
 
-    const handlers = getLastEventHandlers();
-    expect(handlers).toBeDefined();
-    expect(handlers).toHaveProperty('legendselectchanged');
-    expect(handlers).toHaveProperty('legendselectall');
-    expect(handlers).toHaveProperty('legendinverseselect');
+    const { eventHandlers } = mockCapturedProps;
+    expect(eventHandlers).toBeDefined();
+    expect(eventHandlers).toHaveProperty('legendselectchanged');
+    expect(eventHandlers).toHaveProperty('legendselectall');
+    expect(eventHandlers).toHaveProperty('legendinverseselect');
   });
 
   it('task 4.2 — calls onLegendStateChanged with payload.selected when legendselectchanged fires', () => {
     const onLegendStateChanged = jest.fn();
     render(<EchartsPie {...buildProps({ onLegendStateChanged })} />);
 
-    const handlers = getLastEventHandlers();
-    expect(handlers).toBeDefined();
+    const { eventHandlers } = mockCapturedProps;
+    expect(eventHandlers).toBeDefined();
     const selectedMap = { A: true, B: false };
-    handlers.legendselectchanged({ selected: selectedMap });
+    eventHandlers!.legendselectchanged({ selected: selectedMap });
 
     expect(onLegendStateChanged).toHaveBeenCalledTimes(1);
     expect(onLegendStateChanged).toHaveBeenCalledWith(selectedMap);
@@ -132,7 +122,7 @@ describe('EchartsPie — legend event handler wiring', () => {
     render(<EchartsPie {...buildProps({ onLegendStateChanged })} />);
 
     const selectedMap = { A: true, B: true };
-    getLastEventHandlers().legendselectall({ selected: selectedMap });
+    mockCapturedProps.eventHandlers!.legendselectall({ selected: selectedMap });
 
     expect(onLegendStateChanged).toHaveBeenCalledWith(selectedMap);
   });
@@ -142,7 +132,9 @@ describe('EchartsPie — legend event handler wiring', () => {
     render(<EchartsPie {...buildProps({ onLegendStateChanged })} />);
 
     const selectedMap = { A: false, B: true };
-    getLastEventHandlers().legendinverseselect({ selected: selectedMap });
+    mockCapturedProps.eventHandlers!.legendinverseselect({
+      selected: selectedMap,
+    });
 
     expect(onLegendStateChanged).toHaveBeenCalledWith(selectedMap);
   });
@@ -151,7 +143,9 @@ describe('EchartsPie — legend event handler wiring', () => {
     render(<EchartsPie {...buildProps({ onLegendStateChanged: undefined })} />);
 
     expect(() => {
-      getLastEventHandlers().legendselectchanged({ selected: { A: false } });
+      mockCapturedProps.eventHandlers!.legendselectchanged({
+        selected: { A: false },
+      });
     }).not.toThrow();
   });
 });

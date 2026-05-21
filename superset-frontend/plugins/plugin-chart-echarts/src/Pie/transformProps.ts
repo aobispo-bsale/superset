@@ -286,8 +286,9 @@ export default function transformProps(
   if (otherDatum) {
     transformedData.push(otherDatum);
     const otherName = t('Other');
-    const isOtherLegendHidden =
-      legendState ? legendState[otherName] === false : false;
+    const isOtherLegendHidden = legendState
+      ? legendState[otherName] === false
+      : false;
     if (!isOtherLegendHidden) {
       totalValue += otherSum;
     }
