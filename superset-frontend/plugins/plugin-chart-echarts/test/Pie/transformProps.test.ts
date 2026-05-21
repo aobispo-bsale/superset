@@ -448,6 +448,49 @@ describe('Dynamic total value', () => {
     expect(text).not.toContain('25');
     expect(text).toContain('10');
   });
+
+  it('Scenario 2: legend toggle off — hidden slice excluded from total', () => {
+    // B is toggled off in the legend → only A (10) should count
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      legendState: { A: true, B: false },
+    });
+    const text = getTotalText(props);
+    expect(text).not.toContain('25');
+    expect(text).toContain('10');
+  });
+
+  it('Scenario 3: legend toggle back on — total restored', () => {
+    // Both A and B visible → full total 25
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      legendState: { A: true, B: true },
+    });
+    const text = getTotalText(props);
+    expect(text).toContain('25');
+  });
+
+  it('Scenario 6: Other bucket hidden when its legend entry is off', () => {
+    // Data: values 1,2,3,4,5; threshold=20% → items 1 (6.7%) and 2 (13.3%)
+    // are merged into Other (otherSum=3). Remaining shown slices: 3+4+5=12.
+    // When Other legend entry is hidden, total should be 12, not 15.
+    const otherData = [
+      { category: 'foo 1', sum__num: 1, sum__num__contribution: 1 / 15 },
+      { category: 'foo 2', sum__num: 2, sum__num__contribution: 2 / 15 },
+      { category: 'foo 3', sum__num: 3, sum__num__contribution: 3 / 15 },
+      { category: 'foo 4', sum__num: 4, sum__num__contribution: 4 / 15 },
+      { category: 'foo 5', sum__num: 5, sum__num__contribution: 5 / 15 },
+    ];
+    const props = buildDynamicTotalChartProps({
+      data: otherData,
+      thresholdForOther: 20,
+      legendState: { Other: false },
+    });
+    const text = getTotalText(props);
+    // otherSum=3 excluded, shown slices 3+4+5=12
+    expect(text).not.toContain('15');
+    expect(text).toContain('12');
+  });
 });
 
 describe('Other category', () => {
