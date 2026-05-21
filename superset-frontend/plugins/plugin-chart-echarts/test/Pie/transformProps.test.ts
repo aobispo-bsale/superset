@@ -372,6 +372,84 @@ describe('Total value positioning with legends', () => {
   });
 });
 
+// ─── Helper for dynamic-total tests ─────────────────────────────────────────
+function buildDynamicTotalChartProps({
+  data,
+  filterState,
+  legendState,
+  hooks,
+  showTotal = true,
+  thresholdForOther,
+}: {
+  data: Array<{ category: string; sum__num: number; sum__num__contribution?: number }>;
+  filterState?: { selectedValues?: string[] };
+  legendState?: Record<string, boolean>;
+  hooks?: Record<string, unknown>;
+  showTotal?: boolean;
+  thresholdForOther?: number;
+}): EchartsPieChartProps {
+  const formData: SqlaFormData = {
+    colorScheme: 'bnbColors',
+    datasource: '3__table',
+    granularity_sqla: 'ds',
+    metric: 'sum__num',
+    groupby: ['category'],
+    viz_type: 'pie',
+    show_total: showTotal,
+    donut: true,
+    ...(thresholdForOther !== undefined
+      ? { threshold_for_other: thresholdForOther }
+      : {}),
+  };
+  return new ChartProps({
+    formData,
+    width: 800,
+    height: 600,
+    queriesData: [{ data }],
+    theme: supersetTheme,
+    filterState: filterState ?? {},
+    legendState,
+    hooks: hooks ?? {},
+  }) as EchartsPieChartProps;
+}
+
+function getTotalText(
+  props: EchartsPieChartProps,
+): string {
+  const transformed = transformProps(props);
+  const graphic = transformed.echartOptions.graphic as any;
+  return graphic?.style?.text ?? '';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Dynamic total value', () => {
+  const AB = [
+    { category: 'A', sum__num: 10, sum__num__contribution: 0.4 },
+    { category: 'B', sum__num: 15, sum__num__contribution: 0.6 },
+  ];
+
+  it('Scenario 1: initial render — no filters, total equals sum of all slices', () => {
+    const props = buildDynamicTotalChartProps({ data: AB });
+    const text = getTotalText(props);
+    // Total should equal 25 (10 + 15)
+    expect(text).toContain('25');
+    expect(text).not.toContain('10');
+  });
+
+  it('Scenario 4: cross-filter excludes filtered slice from total', () => {
+    // selectedValues=['A'] means A is the active/selected slice;
+    // B is cross-filtered (isFiltered=true for B) → only A contributes
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      filterState: { selectedValues: ['A'] },
+    });
+    const text = getTotalText(props);
+    // Total should equal 10 (only A), NOT 25
+    expect(text).not.toContain('25');
+    expect(text).toContain('10');
+  });
+});
+
 describe('Other category', () => {
   const defaultFormData: SqlaFormData = {
     colorScheme: 'bnbColors',
