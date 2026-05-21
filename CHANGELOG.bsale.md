@@ -17,6 +17,26 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+### Added
+
+- **mixed**: the Mixed Chart now supports **horizontal orientation** via a new
+  `Bar orientation` control in the Customize panel (default `Vertical`, no
+  regression). When set to `Horizontal`, the category axis moves to the Y side
+  and the two value axes are placed as `xAxis[0]` at the bottom (primary
+  metric) and `xAxis[1]` at the top (secondary metric), mirroring ECharts'
+  standard multi-xAxis convention. The patch wires `isHorizontal` through
+  `extractSeries`, `extractShowValueIndexes`, `transformSeries`, `getPadding`,
+  and all four annotation transformers (interval/event/formula/timeseries);
+  renames `yAxisIndex → xAxisIndex` on series objects (guarded by
+  `'yAxisIndex' in s`); fixes the three hardcoded tooltip param indices
+  previously commented as "horizontal mode is not supported"; sets
+  `dataZoom.yAxisIndex: 0` so zoom follows the category axis; and adjusts
+  `label.position` to `'right'` for bar series in horizontal mode. Existing
+  `yAxisLabel` / `yAxis2Label` / `yAxisBounds` controls are preserved with
+  widened semantics — they always refer to the primary/secondary value axis
+  pair regardless of physical orientation, so dashboards using vertical mode
+  are unaffected.
+
 ## [6.0.0-bsale.4] - 2026-05-21
 
 ### Fixed
