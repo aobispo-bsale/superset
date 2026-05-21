@@ -35,6 +35,7 @@ import {
   StackType,
   TitleFormData,
 } from '../types';
+import { OrientationType } from '../Timeseries/types';
 import {
   DEFAULT_LEGEND_FORM_DATA,
   DEFAULT_TITLE_FORM_DATA,
@@ -89,6 +90,7 @@ export type EchartsMixedTimeseriesFormData = QueryFormData & {
   yAxisIndexB?: number;
   groupby: QueryFormColumn[];
   groupbyB: QueryFormColumn[];
+  orientation?: OrientationType;
 } & LegendFormData &
   TitleFormData;
 
@@ -137,6 +139,7 @@ export const DEFAULT_FORM_DATA: EchartsMixedTimeseriesFormData = {
   showQueryIdentifiers: false,
   xAxisLabelRotation: TIMESERIES_DEFAULTS.xAxisLabelRotation,
   xAxisLabelInterval: TIMESERIES_DEFAULTS.xAxisLabelInterval,
+  orientation: OrientationType.Vertical,
   ...DEFAULT_TITLE_FORM_DATA,
 };
 

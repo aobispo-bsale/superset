@@ -56,6 +56,7 @@ import {
   ForecastSeriesEnum,
   Refs,
 } from '../types';
+import { OrientationType } from '../Timeseries/types';
 import { parseAxisBound } from '../utils/controls';
 import {
   dedupSeries,
@@ -217,8 +218,10 @@ export default function transformProps(
     showQueryIdentifiers = false,
     metrics = [],
     metricsB = [],
+    orientation,
   }: EchartsMixedTimeseriesFormData = { ...DEFAULT_FORM_DATA, ...formData };
 
+  const isHorizontal = orientation === OrientationType.Horizontal;
   const refs: Refs = {};
   const colorScale = CategoricalColorNamespace.getScale(colorScheme as string);
 
@@ -257,6 +260,7 @@ export default function transformProps(
     stack,
     totalStackedValues,
     xAxisType,
+    isHorizontal,
   });
   const rebasedDataB = rebaseForecastDatum(data2, verboseMap);
   const {
@@ -275,6 +279,7 @@ export default function transformProps(
     stack: Boolean(stackB),
     totalStackedValues: totalStackedValuesB,
     xAxisType,
+    isHorizontal,
   });
   const series: SeriesOption[] = [];
   const formatter = contributionMode
@@ -323,10 +328,14 @@ export default function transformProps(
   const showValueIndexesA = extractShowValueIndexes(rawSeriesA, {
     stack,
     onlyTotal,
+    isHorizontal,
+    legendState,
   });
   const showValueIndexesB = extractShowValueIndexes(rawSeriesB, {
     stack,
     onlyTotal,
+    isHorizontal,
+    legendState,
   });
 
   annotationLayers
@@ -341,6 +350,7 @@ export default function transformProps(
             xAxisType,
             colorScale,
             sliceId,
+            orientation,
           ),
         );
       else if (isIntervalAnnotationLayer(layer)) {
@@ -352,6 +362,7 @@ export default function transformProps(
             colorScale,
             theme,
             sliceId,
+            orientation,
           ),
         );
       } else if (isEventAnnotationLayer(layer)) {
@@ -363,6 +374,7 @@ export default function transformProps(
             colorScale,
             theme,
             sliceId,
+            orientation,
           ),
         );
       } else if (isTimeseriesAnnotationLayer(layer)) {
@@ -374,6 +386,7 @@ export default function transformProps(
             annotationData,
             colorScale,
             sliceId,
+            orientation,
           ),
         );
       }
@@ -434,6 +447,7 @@ export default function transformProps(
         stack: Boolean(stack),
         stackIdSuffix: '\na',
         yAxisIndex,
+        isHorizontal,
         filterState,
         seriesKey: entry.name,
         sliceId,
@@ -504,6 +518,7 @@ export default function transformProps(
         showValue: showValueB,
         onlyTotal: onlyTotalB,
         stack: Boolean(stackB),
+        isHorizontal,
         stackIdSuffix: '\nb',
         yAxisIndex: yAxisIndexB,
         filterState,
@@ -530,6 +545,21 @@ export default function transformProps(
       mapSeriesIdToAxis(transformedSeries, yAxisIndexB);
     }
   });
+
+  // In horizontal mode, rename yAxisIndex → xAxisIndex on every series so
+  // ECharts maps them to the correct horizontal value axis (primary at xAxis[0],
+  // secondary at xAxis[1]). The guard 'yAxisIndex' in s ensures we only mutate
+  // actual series objects, not annotation sub-objects (markLine/markArea/etc.).
+  if (isHorizontal) {
+    series.forEach((s: any) => {
+      if ('yAxisIndex' in s) {
+        // eslint-disable-next-line no-param-reassign
+        s.xAxisIndex = s.yAxisIndex;
+        // eslint-disable-next-line no-param-reassign
+        delete s.yAxisIndex;
+      }
+    });
+  }
 
   // default to 0-100% range when doing row-level contribution chart
   if (contributionMode === 'row' && stack) {
@@ -561,10 +591,96 @@ export default function transformProps(
     yAxisTitlePosition,
     convertInteger(yAxisTitleMargin),
     convertInteger(xAxisTitleMargin),
+    isHorizontal,
   );
 
   const { setDataMask = () => {}, onContextMenu } = hooks;
   const alignTicks = yAxisIndex !== yAxisIndexB;
+
+  // Build axis objects as mutable bindings so we can swap them for horizontal mode
+  let xAxisObj: any = {
+    type: xAxisType,
+    name: xAxisTitle,
+    nameGap: convertInteger(xAxisTitleMargin),
+    nameLocation: 'middle',
+    axisLabel: {
+      formatter: xAxisFormatter,
+      rotate: xAxisLabelRotation,
+      interval: xAxisLabelInterval,
+    },
+    minorTick: { show: minorTicks },
+    minInterval:
+      xAxisType === AxisType.Time && timeGrainSqla
+        ? TIMEGRAIN_TO_TIMESTAMP[
+            timeGrainSqla as keyof typeof TIMEGRAIN_TO_TIMESTAMP
+          ]
+        : 0,
+    ...getMinAndMaxFromBounds(
+      xAxisType,
+      truncateXAxis,
+      xAxisMin,
+      xAxisMax,
+      seriesType === EchartsTimeseriesSeriesType.Bar ||
+        seriesTypeB === EchartsTimeseriesSeriesType.Bar
+        ? EchartsTimeseriesSeriesType.Bar
+        : undefined,
+    ),
+  };
+
+  let yAxisObj: any = [
+    {
+      ...defaultYAxis,
+      type: logAxis ? 'log' : 'value',
+      min: yAxisMin,
+      max: yAxisMax,
+      minorTick: { show: minorTicks },
+      minorSplitLine: { show: minorSplitLine },
+      axisLabel: {
+        formatter: getYAxisFormatter(
+          metrics,
+          !!contributionMode,
+          customFormatters,
+          formatter,
+          yAxisFormat,
+        ),
+      },
+      scale: truncateYAxis,
+      name: yAxisTitle,
+      nameGap: convertInteger(yAxisTitleMargin),
+      nameLocation: yAxisTitlePosition === 'Left' ? 'middle' : 'end',
+      alignTicks,
+    },
+    {
+      ...defaultYAxis,
+      type: logAxisSecondary ? 'log' : 'value',
+      min: minSecondary,
+      max: maxSecondary,
+      minorTick: { show: minorTicks },
+      splitLine: { show: false },
+      minorSplitLine: { show: minorSplitLine },
+      axisLabel: {
+        formatter: getYAxisFormatter(
+          metricsB,
+          !!contributionMode,
+          customFormattersSecondary,
+          formatterSecondary,
+          yAxisFormatSecondary,
+        ),
+      },
+      scale: truncateYAxis,
+      name: yAxisTitleSecondary,
+      alignTicks,
+    },
+  ];
+
+  if (isHorizontal) {
+    // Swap: category axis moves to yAxis (scalar), value axes move to xAxis (array)
+    [xAxisObj, yAxisObj] = [yAxisObj, xAxisObj];
+    // Place the two value axes: primary at bottom, secondary at top
+    xAxisObj[0] = { ...xAxisObj[0], position: 'bottom' };
+    xAxisObj[1] = { ...xAxisObj[1], position: 'top' };
+    // getPadding already swaps legend-margin placement via isHorizontal; no further swap needed
+  }
 
   const echartOptions: EChartsCoreOption = {
     useUTC: true,
@@ -572,100 +688,31 @@ export default function transformProps(
       ...defaultGrid,
       ...chartPadding,
     },
-    xAxis: {
-      type: xAxisType,
-      name: xAxisTitle,
-      nameGap: convertInteger(xAxisTitleMargin),
-      nameLocation: 'middle',
-      axisLabel: {
-        formatter: xAxisFormatter,
-        rotate: xAxisLabelRotation,
-        interval: xAxisLabelInterval,
-      },
-      minorTick: { show: minorTicks },
-      minInterval:
-        xAxisType === AxisType.Time && timeGrainSqla
-          ? TIMEGRAIN_TO_TIMESTAMP[
-              timeGrainSqla as keyof typeof TIMEGRAIN_TO_TIMESTAMP
-            ]
-          : 0,
-      ...getMinAndMaxFromBounds(
-        xAxisType,
-        truncateXAxis,
-        xAxisMin,
-        xAxisMax,
-        seriesType === EchartsTimeseriesSeriesType.Bar ||
-          seriesTypeB === EchartsTimeseriesSeriesType.Bar
-          ? EchartsTimeseriesSeriesType.Bar
-          : undefined,
-      ),
-    },
-    yAxis: [
-      {
-        ...defaultYAxis,
-        type: logAxis ? 'log' : 'value',
-        min: yAxisMin,
-        max: yAxisMax,
-        minorTick: { show: minorTicks },
-        minorSplitLine: { show: minorSplitLine },
-        axisLabel: {
-          formatter: getYAxisFormatter(
-            metrics,
-            !!contributionMode,
-            customFormatters,
-            formatter,
-            yAxisFormat,
-          ),
-        },
-        scale: truncateYAxis,
-        name: yAxisTitle,
-        nameGap: convertInteger(yAxisTitleMargin),
-        nameLocation: yAxisTitlePosition === 'Left' ? 'middle' : 'end',
-        alignTicks,
-      },
-      {
-        ...defaultYAxis,
-        type: logAxisSecondary ? 'log' : 'value',
-        min: minSecondary,
-        max: maxSecondary,
-        minorTick: { show: minorTicks },
-        splitLine: { show: false },
-        minorSplitLine: { show: minorSplitLine },
-        axisLabel: {
-          formatter: getYAxisFormatter(
-            metricsB,
-            !!contributionMode,
-            customFormattersSecondary,
-            formatterSecondary,
-            yAxisFormatSecondary,
-          ),
-        },
-        scale: truncateYAxis,
-        name: yAxisTitleSecondary,
-        alignTicks,
-      },
-    ],
+    xAxis: xAxisObj,
+    yAxis: yAxisObj,
     tooltip: {
       ...getDefaultTooltip(refs),
       show: !inContextMenu,
       trigger: richTooltip ? 'axis' : 'item',
       formatter: (params: any) => {
+        const [xIndex, yIndex] = isHorizontal ? [1, 0] : [0, 1];
         const xValue: number = richTooltip
-          ? params[0].value[0]
-          : params.value[0];
+          ? params[0].value[xIndex]
+          : params.value[xIndex];
         const forecastValue: any[] = richTooltip ? params : [params];
 
         const sortedKeys = extractTooltipKeys(
           forecastValue,
-          // horizontal mode is not supported in mixed series chart
-          1,
+          yIndex,
           richTooltip,
           tooltipSortByMetric,
         );
 
         const rows: string[][] = [];
-        const forecastValues =
-          extractForecastValuesFromTooltipParams(forecastValue);
+        const forecastValues = extractForecastValuesFromTooltipParams(
+          forecastValue,
+          isHorizontal,
+        );
 
         const keys = Object.keys(forecastValues);
         let focusedRow;
@@ -754,6 +801,7 @@ export default function transformProps(
             start: TIMESERIES_CONSTANTS.dataZoomStart,
             end: TIMESERIES_CONSTANTS.dataZoomEnd,
             bottom: TIMESERIES_CONSTANTS.zoomBottom,
+            ...(isHorizontal ? { yAxisIndex: 0 } : {}),
           },
         ]
       : [],
