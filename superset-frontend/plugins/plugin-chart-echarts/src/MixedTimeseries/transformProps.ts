@@ -260,6 +260,7 @@ export default function transformProps(
     stack,
     totalStackedValues,
     xAxisType,
+    isHorizontal,
   });
   const rebasedDataB = rebaseForecastDatum(data2, verboseMap);
   const {
@@ -278,6 +279,7 @@ export default function transformProps(
     stack: Boolean(stackB),
     totalStackedValues: totalStackedValuesB,
     xAxisType,
+    isHorizontal,
   });
   const series: SeriesOption[] = [];
   const formatter = contributionMode
@@ -326,10 +328,14 @@ export default function transformProps(
   const showValueIndexesA = extractShowValueIndexes(rawSeriesA, {
     stack,
     onlyTotal,
+    isHorizontal,
+    legendState,
   });
   const showValueIndexesB = extractShowValueIndexes(rawSeriesB, {
     stack,
     onlyTotal,
+    isHorizontal,
+    legendState,
   });
 
   annotationLayers
@@ -344,6 +350,7 @@ export default function transformProps(
             xAxisType,
             colorScale,
             sliceId,
+            orientation,
           ),
         );
       else if (isIntervalAnnotationLayer(layer)) {
@@ -355,6 +362,7 @@ export default function transformProps(
             colorScale,
             theme,
             sliceId,
+            orientation,
           ),
         );
       } else if (isEventAnnotationLayer(layer)) {
@@ -366,6 +374,7 @@ export default function transformProps(
             colorScale,
             theme,
             sliceId,
+            orientation,
           ),
         );
       } else if (isTimeseriesAnnotationLayer(layer)) {
@@ -377,6 +386,7 @@ export default function transformProps(
             annotationData,
             colorScale,
             sliceId,
+            orientation,
           ),
         );
       }
@@ -787,6 +797,7 @@ export default function transformProps(
             start: TIMESERIES_CONSTANTS.dataZoomStart,
             end: TIMESERIES_CONSTANTS.dataZoomEnd,
             bottom: TIMESERIES_CONSTANTS.zoomBottom,
+            ...(isHorizontal ? { yAxisIndex: 0 } : {}),
           },
         ]
       : [],

@@ -22,6 +22,12 @@ import {
   LegendType,
   EchartsTimeseriesSeriesType,
 } from '../../src';
+import {
+  AnnotationSourceType,
+  AnnotationStyle,
+  AnnotationType,
+  IntervalAnnotationLayer,
+} from '@superset-ui/core';
 import transformProps from '../../src/MixedTimeseries/transformProps';
 import {
   EchartsMixedTimeseriesFormData,
@@ -494,5 +500,148 @@ describe('horizontal orientation', () => {
       (s: any) => s.type === 'bar',
     );
     expect(horizontalBarSeries?.label?.position).toBe('right');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cycle 5 — Stacked + dataZoom + annotations (Scenarios 7, 10, 9)
+  // ---------------------------------------------------------------------------
+  it('Scenario 7: stacked horizontal — extractSeries receives isHorizontal and stacked bars have label.position right', () => {
+    // Fixture: stack=true on both queries, showValue=true so label.position is set
+    const chartProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        stack: true,
+        stackB: true,
+        showValue: true,
+        showValueB: true,
+        seriesType: EchartsTimeseriesSeriesType.Bar,
+        seriesTypeB: EchartsTimeseriesSeriesType.Bar,
+      },
+    });
+    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const opts = transformed.echartOptions as any;
+
+    // All bar series in horizontal mode must have label.position 'right'
+    const barSeries: any[] = (opts.series as any[]).filter(
+      (s: any) => s.type === 'bar',
+    );
+    expect(barSeries.length).toBeGreaterThan(0);
+    barSeries.forEach((s: any) => {
+      expect(s.label?.position).toBe('right');
+    });
+  });
+
+  it('Scenario 10: dataZoom yAxisIndex=0 in horizontal mode; undefined in vertical', () => {
+    const horizontalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        zoomable: true,
+      },
+    });
+    const horizontalTransformed = transformProps(
+      horizontalProps as EchartsMixedTimeseriesProps,
+    );
+    const horizontalDataZoom = (horizontalTransformed.echartOptions as any)
+      .dataZoom;
+    expect(Array.isArray(horizontalDataZoom)).toBe(true);
+    expect(horizontalDataZoom.length).toBeGreaterThan(0);
+    expect(horizontalDataZoom[0].yAxisIndex).toBe(0);
+
+    const verticalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        zoomable: true,
+      },
+    });
+    const verticalTransformed = transformProps(
+      verticalProps as EchartsMixedTimeseriesProps,
+    );
+    const verticalDataZoom = (verticalTransformed.echartOptions as any).dataZoom;
+    expect(Array.isArray(verticalDataZoom)).toBe(true);
+    expect(verticalDataZoom.length).toBeGreaterThan(0);
+    expect(verticalDataZoom[0].yAxisIndex).toBeUndefined();
+  });
+
+  it('Scenario 9: interval annotation markArea bound to yAxis (not xAxis) in horizontal mode', () => {
+    const intervalLayer: IntervalAnnotationLayer = {
+      annotationType: AnnotationType.Interval,
+      name: 'My Interval',
+      show: true,
+      showLabel: false,
+      sourceType: AnnotationSourceType.Table,
+      titleColumn: '',
+      timeColumn: 'start',
+      intervalEndColumn: 'end',
+      descriptionColumns: [],
+      style: AnnotationStyle.Dashed,
+      value: 'interval-annotation-id',
+    };
+    const intervalAnnotationData = {
+      'My Interval': {
+        columns: ['start', 'end'],
+        records: [{ start: 0, end: 1000 }],
+      },
+    };
+    // annotation_data must be embedded in queriesData[0] — that is where
+    // getAnnotationData() reads it from.
+    const queriesDataWithAnnotation = [
+      {
+        ...queriesData[0],
+        annotation_data: intervalAnnotationData,
+      },
+      queriesData[1],
+    ];
+
+    // Horizontal: markArea data items must use yAxis keys
+    const horizontalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        annotationLayers: [intervalLayer],
+      },
+      queriesData: queriesDataWithAnnotation,
+    });
+    const horizontalTransformed = transformProps(
+      horizontalProps as EchartsMixedTimeseriesProps,
+    );
+    const hSeries: any[] = horizontalTransformed.echartOptions.series as any[];
+    const hIntervalSeries = hSeries.find(s =>
+      String(s.id).startsWith('Interval'),
+    );
+    expect(hIntervalSeries).toBeDefined();
+    const hMarkAreaData = hIntervalSeries.markArea?.data?.[0];
+    expect(hMarkAreaData).toBeDefined();
+    // In horizontal mode the mark uses yAxis, not xAxis
+    expect('yAxis' in hMarkAreaData[0]).toBe(true);
+    expect('xAxis' in hMarkAreaData[0]).toBe(false);
+
+    // Vertical: markArea data items must use xAxis keys
+    const verticalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        annotationLayers: [intervalLayer],
+      },
+      queriesData: queriesDataWithAnnotation,
+    });
+    const verticalTransformed = transformProps(
+      verticalProps as EchartsMixedTimeseriesProps,
+    );
+    const vSeries: any[] = verticalTransformed.echartOptions.series as any[];
+    const vIntervalSeries = vSeries.find(s =>
+      String(s.id).startsWith('Interval'),
+    );
+    expect(vIntervalSeries).toBeDefined();
+    const vMarkAreaData = vIntervalSeries.markArea?.data?.[0];
+    expect(vMarkAreaData).toBeDefined();
+    // In vertical mode the mark uses xAxis, not yAxis
+    expect('xAxis' in vMarkAreaData[0]).toBe(true);
+    expect('yAxis' in vMarkAreaData[0]).toBe(false);
   });
 });
