@@ -491,6 +491,71 @@ describe('Dynamic total value', () => {
     expect(text).not.toContain('15');
     expect(text).toContain('12');
   });
+
+  it('Scenario 5: cross-filter + legend hide different slices — no double-subtraction', () => {
+    // A=10, B=15, C=20.
+    // selectedValues=['B','C'] → A is NOT in selectedValues → isFiltered=true for A.
+    // legendState.B=false → B hidden by legend.
+    // Only C (20) contributes: A excluded by cross-filter, B excluded by legend.
+    const ABC = [
+      { category: 'A', sum__num: 10, sum__num__contribution: 10 / 45 },
+      { category: 'B', sum__num: 15, sum__num__contribution: 15 / 45 },
+      { category: 'C', sum__num: 20, sum__num__contribution: 20 / 45 },
+    ];
+    const props = buildDynamicTotalChartProps({
+      data: ABC,
+      filterState: { selectedValues: ['B', 'C'] },
+      legendState: { A: true, B: false, C: true },
+    });
+    const text = getTotalText(props);
+    // Only C (20) contributes; A excluded by cross-filter, B excluded by legend
+    expect(text).toContain('20');
+    expect(text).not.toContain('45');
+    expect(text).not.toContain('35'); // A+C must not appear
+    expect(text).not.toContain('25'); // B+C must not appear
+  });
+
+  it('Scenario 5 sub-case: slice hidden by both signals excluded exactly once', () => {
+    // A is cross-filtered (selectedValues=['B']) AND legendState.A=false
+    // → A excluded exactly once; total = B = 15
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      filterState: { selectedValues: ['B'] },
+      legendState: { A: false, B: true },
+    });
+    const text = getTotalText(props);
+    expect(text).toContain('15');
+    expect(text).not.toContain('25');
+    expect(text).not.toContain('-');
+  });
+
+  it('Scenario 7: re-render with same state produces identical total — function is pure', () => {
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      filterState: { selectedValues: ['A'] },
+      legendState: { A: true, B: false },
+    });
+    const text1 = getTotalText(props);
+    const text2 = getTotalText(props);
+    expect(text1).toBe(text2);
+  });
+
+  it('treats undefined legendState as all-visible — no regression', () => {
+    // legendState omitted entirely → same as baseline
+    const props = buildDynamicTotalChartProps({ data: AB });
+    const text = getTotalText(props);
+    expect(text).toContain('25');
+  });
+
+  it('returns onLegendStateChanged from transformProps', () => {
+    const onLegendStateChanged = jest.fn();
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      hooks: { onLegendStateChanged },
+    });
+    const transformed = transformProps(props);
+    expect(transformed.onLegendStateChanged).toBe(onLegendStateChanged);
+  });
 });
 
 describe('Other category', () => {
