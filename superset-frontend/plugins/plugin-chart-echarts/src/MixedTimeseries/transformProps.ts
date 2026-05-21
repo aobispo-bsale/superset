@@ -553,7 +553,9 @@ export default function transformProps(
   if (isHorizontal) {
     series.forEach((s: any) => {
       if ('yAxisIndex' in s) {
+        // eslint-disable-next-line no-param-reassign
         s.xAxisIndex = s.yAxisIndex;
+        // eslint-disable-next-line no-param-reassign
         delete s.yAxisIndex;
       }
     });
@@ -707,8 +709,10 @@ export default function transformProps(
         );
 
         const rows: string[][] = [];
-        const forecastValues =
-          extractForecastValuesFromTooltipParams(forecastValue, isHorizontal);
+        const forecastValues = extractForecastValuesFromTooltipParams(
+          forecastValue,
+          isHorizontal,
+        );
 
         const keys = Object.keys(forecastValues);
         let focusedRow;

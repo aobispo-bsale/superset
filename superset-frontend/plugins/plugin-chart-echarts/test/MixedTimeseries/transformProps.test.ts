@@ -16,18 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { ChartProps, supersetTheme, VizType } from '@superset-ui/core';
+import {
+  AnnotationSourceType,
+  AnnotationStyle,
+  AnnotationType,
+  ChartProps,
+  IntervalAnnotationLayer,
+  supersetTheme,
+  VizType,
+} from '@superset-ui/core';
 import {
   LegendOrientation,
   LegendType,
   EchartsTimeseriesSeriesType,
 } from '../../src';
-import {
-  AnnotationSourceType,
-  AnnotationStyle,
-  AnnotationType,
-  IntervalAnnotationLayer,
-} from '@superset-ui/core';
 import transformProps from '../../src/MixedTimeseries/transformProps';
 import {
   EchartsMixedTimeseriesFormData,
@@ -275,7 +277,9 @@ describe('horizontal orientation', () => {
   it('Scenario 1: defaults to Vertical when orientation is omitted — xAxis is scalar, yAxis is length-2 array, no xAxisIndex on series', () => {
     // orientation field omitted entirely — DEFAULT_FORM_DATA must supply Vertical
     const chartProps = new ChartProps(chartPropsConfig);
-    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const transformed = transformProps(
+      chartProps as EchartsMixedTimeseriesProps,
+    );
     const opts = transformed.echartOptions as any;
 
     // xAxis must be a scalar object (not an array)
@@ -330,7 +334,9 @@ describe('horizontal orientation', () => {
       ...chartPropsConfig,
       formData: { ...formData, orientation: OrientationType.Horizontal },
     });
-    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const transformed = transformProps(
+      chartProps as EchartsMixedTimeseriesProps,
+    );
     const opts = transformed.echartOptions as any;
 
     // xAxis must become a length-2 array
@@ -351,7 +357,9 @@ describe('horizontal orientation', () => {
       ...chartPropsConfig,
       formData: { ...formData, orientation: OrientationType.Horizontal },
     });
-    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const transformed = transformProps(
+      chartProps as EchartsMixedTimeseriesProps,
+    );
     const opts = transformed.echartOptions as any;
 
     expect(opts.xAxis[0].position).toBe('bottom');
@@ -412,7 +420,9 @@ describe('horizontal orientation', () => {
         yAxisIndexB: 1,
       },
     });
-    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const transformed = transformProps(
+      chartProps as EchartsMixedTimeseriesProps,
+    );
     const opts = transformed.echartOptions as any;
     const allSeries: any[] = opts.series;
 
@@ -438,7 +448,9 @@ describe('horizontal orientation', () => {
         richTooltip: false,
       },
     });
-    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const transformed = transformProps(
+      chartProps as EchartsMixedTimeseriesProps,
+    );
     const tooltipFormatter = (transformed.echartOptions as any).tooltip
       .formatter;
 
@@ -477,9 +489,7 @@ describe('horizontal orientation', () => {
     );
     const verticalSeries: any[] = (verticalTransformed.echartOptions as any)
       .series;
-    const verticalBarSeries = verticalSeries.find(
-      (s: any) => s.type === 'bar',
-    );
+    const verticalBarSeries = verticalSeries.find((s: any) => s.type === 'bar');
     expect(verticalBarSeries?.label?.position).toBe('top');
 
     const horizontalProps = new ChartProps({
@@ -520,7 +530,9 @@ describe('horizontal orientation', () => {
         seriesTypeB: EchartsTimeseriesSeriesType.Bar,
       },
     });
-    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const transformed = transformProps(
+      chartProps as EchartsMixedTimeseriesProps,
+    );
     const opts = transformed.echartOptions as any;
 
     // All bar series in horizontal mode must have label.position 'right'
@@ -561,7 +573,8 @@ describe('horizontal orientation', () => {
     const verticalTransformed = transformProps(
       verticalProps as EchartsMixedTimeseriesProps,
     );
-    const verticalDataZoom = (verticalTransformed.echartOptions as any).dataZoom;
+    const verticalDataZoom = (verticalTransformed.echartOptions as any)
+      .dataZoom;
     expect(Array.isArray(verticalDataZoom)).toBe(true);
     expect(verticalDataZoom.length).toBeGreaterThan(0);
     expect(verticalDataZoom[0].yAxisIndex).toBeUndefined();

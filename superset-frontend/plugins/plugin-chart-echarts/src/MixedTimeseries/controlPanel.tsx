@@ -33,7 +33,10 @@ import {
 } from '@superset-ui/chart-controls';
 
 import { DEFAULT_FORM_DATA } from './types';
-import { EchartsTimeseriesSeriesType, OrientationType } from '../Timeseries/types';
+import {
+  EchartsTimeseriesSeriesType,
+  OrientationType,
+} from '../Timeseries/types';
 import {
   legendSection,
   minorTicks,
