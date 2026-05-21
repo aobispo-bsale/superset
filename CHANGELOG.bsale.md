@@ -17,6 +17,8 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+## [6.0.0-bsale.5] - 2026-05-21
+
 ### Added
 
 - **mixed**: the Mixed Chart now supports **horizontal orientation** via a new
