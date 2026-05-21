@@ -446,7 +446,14 @@ export default function transformProps(
       },
     },
     legend: {
-      ...getLegendProps(legendType, legendOrientation, showLegend, theme),
+      ...getLegendProps(
+        legendType,
+        legendOrientation,
+        showLegend,
+        theme,
+        false,
+        legendState,
+      ),
       data: transformedData.map(datum => datum.name),
     },
     graphic: showTotal

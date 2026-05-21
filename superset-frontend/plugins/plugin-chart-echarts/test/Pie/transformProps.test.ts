@@ -593,6 +593,20 @@ describe('Dynamic total value', () => {
     const transformed = transformProps(props);
     expect(transformed.onLegendStateChanged).toBe(onLegendStateChanged);
   });
+
+  it('regression: echartOptions.legend.selected mirrors legendState so ECharts setOption(_, notMerge=true) preserves user toggles', () => {
+    // Without this, a single legend click is silently undone on re-render because
+    // setOption(themedEchartOptions, true) wipes ECharts legend state and our
+    // options carried no `selected` field. Users had to click twice.
+    const legendState = { A: true, B: false };
+    const props = buildDynamicTotalChartProps({
+      data: AB,
+      legendState,
+    });
+    const transformed = transformProps(props);
+    const legend = transformed.echartOptions.legend as any;
+    expect(legend.selected).toEqual(legendState);
+  });
 });
 
 describe('Other category', () => {
