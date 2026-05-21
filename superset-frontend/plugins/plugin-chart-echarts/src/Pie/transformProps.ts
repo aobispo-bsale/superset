@@ -134,6 +134,7 @@ export default function transformProps(
     inContextMenu,
     emitCrossFilters,
     datasource,
+    legendState,
   } = chartProps;
   const { columnFormats = {}, currencyFormats = {} } = datasource;
   const { data: rawData = [] } = queriesData[0];
@@ -245,7 +246,7 @@ export default function transformProps(
     };
   }, {});
 
-  const { setDataMask = () => {}, onContextMenu } = hooks;
+  const { setDataMask = () => {}, onContextMenu, onLegendStateChanged } = hooks;
   const colorFn = CategoricalColorNamespace.getScale(colorScheme as string);
 
   let totalValue = 0;
@@ -260,9 +261,14 @@ export default function transformProps(
 
     const isFiltered =
       filterState.selectedValues && !filterState.selectedValues.includes(name);
+    const isLegendHidden = legendState ? legendState[name] === false : false;
     const value = datum[metricLabel];
 
-    if (!isFiltered && (typeof value === 'number' || typeof value === 'string')) {
+    if (
+      !isFiltered &&
+      !isLegendHidden &&
+      (typeof value === 'number' || typeof value === 'string')
+    ) {
       totalValue += convertInteger(value);
     }
 
@@ -279,7 +285,12 @@ export default function transformProps(
   });
   if (otherDatum) {
     transformedData.push(otherDatum);
-    totalValue += otherSum;
+    const otherName = t('Other');
+    const isOtherLegendHidden =
+      legendState ? legendState[otherName] === false : false;
+    if (!isOtherLegendHidden) {
+      totalValue += otherSum;
+    }
   }
 
   const selectedValues = (filterState.selectedValues || []).reduce(
@@ -466,5 +477,6 @@ export default function transformProps(
     refs,
     emitCrossFilters,
     coltypeMapping,
+    onLegendStateChanged,
   };
 }
