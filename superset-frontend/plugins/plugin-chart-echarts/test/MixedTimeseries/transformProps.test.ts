@@ -392,4 +392,107 @@ describe('horizontal orientation', () => {
     expect(horizontalGrid.left).toEqual(verticalGrid.bottom);
     expect(horizontalGrid.bottom).toEqual(verticalGrid.left);
   });
+
+  // ---------------------------------------------------------------------------
+  // Cycle 3 — Series axisIndex rename (Scenario 5)
+  // ---------------------------------------------------------------------------
+  it('Scenario 5: every series has xAxisIndex (not yAxisIndex) in horizontal mode', () => {
+    const chartProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        // Explicitly set yAxisIndexB=1 so secondary series get index 1
+        yAxisIndexB: 1,
+      },
+    });
+    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const opts = transformed.echartOptions as any;
+    const allSeries: any[] = opts.series;
+
+    // Every series must have xAxisIndex — not yAxisIndex
+    allSeries.forEach((s: any) => {
+      expect('xAxisIndex' in s).toBe(true);
+      expect('yAxisIndex' in s).toBe(false);
+      expect(s.xAxisIndex === 0 || s.xAxisIndex === 1).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cycle 4 — Tooltip xValue index + label.position (Scenarios 8, 11)
+  // ---------------------------------------------------------------------------
+  it('Scenario 8: tooltip header contains category string (not numeric index) in horizontal mode', () => {
+    // In horizontal mode value[0] is the numeric metric and value[1] is the
+    // category label. The tooltip header must show value[1], not value[0].
+    const chartProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        richTooltip: false,
+      },
+    });
+    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const tooltipFormatter = (transformed.echartOptions as any).tooltip
+      .formatter;
+
+    // Simulate an ECharts tooltip param where value[0]=numeric, value[1]=category
+    const mockParam = {
+      seriesId: 'sum__num, boy',
+      seriesName: 'sum__num, boy',
+      marker: '<span>●</span>',
+      value: [42, 'Category A'],
+    };
+    const html: string = tooltipFormatter(mockParam);
+    // The tooltip header (bold title span) must show the category string,
+    // not the numeric value. We verify the bold header text contains the
+    // category label. (The number 42 may appear in the table body as the
+    // metric value — that is correct behavior and not a regression.)
+    expect(html).toContain('Category A');
+    // Confirm 'Category A' is in the bold header, not only in the body
+    const headerMatch = html.match(
+      /<span style="font-weight: 700[^"]*">([^<]*)<\/span>/,
+    );
+    expect(headerMatch?.[1]).toBe('Category A');
+  });
+
+  it('Scenario 11: bar series label.position is "right" in horizontal, "top" in vertical', () => {
+    // Query A = Line (no label position requirement), Query B = Bar
+    const verticalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        seriesTypeB: EchartsTimeseriesSeriesType.Bar,
+        showValueB: true,
+      },
+    });
+    const verticalTransformed = transformProps(
+      verticalProps as EchartsMixedTimeseriesProps,
+    );
+    const verticalSeries: any[] = (verticalTransformed.echartOptions as any)
+      .series;
+    const verticalBarSeries = verticalSeries.find(
+      (s: any) => s.type === 'bar',
+    );
+    expect(verticalBarSeries?.label?.position).toBe('top');
+
+    const horizontalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        seriesTypeB: EchartsTimeseriesSeriesType.Bar,
+        showValueB: true,
+      },
+    });
+    const horizontalTransformed = transformProps(
+      horizontalProps as EchartsMixedTimeseriesProps,
+    );
+    const horizontalSeries: any[] = (horizontalTransformed.echartOptions as any)
+      .series;
+    const horizontalBarSeries = horizontalSeries.find(
+      (s: any) => s.type === 'bar',
+    );
+    expect(horizontalBarSeries?.label?.position).toBe('right');
+  });
 });

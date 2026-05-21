@@ -437,6 +437,7 @@ export default function transformProps(
         stack: Boolean(stack),
         stackIdSuffix: '\na',
         yAxisIndex,
+        isHorizontal,
         filterState,
         seriesKey: entry.name,
         sliceId,
@@ -507,6 +508,7 @@ export default function transformProps(
         showValue: showValueB,
         onlyTotal: onlyTotalB,
         stack: Boolean(stackB),
+        isHorizontal,
         stackIdSuffix: '\nb',
         yAxisIndex: yAxisIndexB,
         filterState,
@@ -533,6 +535,19 @@ export default function transformProps(
       mapSeriesIdToAxis(transformedSeries, yAxisIndexB);
     }
   });
+
+  // In horizontal mode, rename yAxisIndex → xAxisIndex on every series so
+  // ECharts maps them to the correct horizontal value axis (primary at xAxis[0],
+  // secondary at xAxis[1]). The guard 'yAxisIndex' in s ensures we only mutate
+  // actual series objects, not annotation sub-objects (markLine/markArea/etc.).
+  if (isHorizontal) {
+    series.forEach((s: any) => {
+      if ('yAxisIndex' in s) {
+        s.xAxisIndex = s.yAxisIndex;
+        delete s.yAxisIndex;
+      }
+    });
+  }
 
   // default to 0-100% range when doing row-level contribution chart
   if (contributionMode === 'row' && stack) {
@@ -668,22 +683,22 @@ export default function transformProps(
       show: !inContextMenu,
       trigger: richTooltip ? 'axis' : 'item',
       formatter: (params: any) => {
+        const [xIndex, yIndex] = isHorizontal ? [1, 0] : [0, 1];
         const xValue: number = richTooltip
-          ? params[0].value[0]
-          : params.value[0];
+          ? params[0].value[xIndex]
+          : params.value[xIndex];
         const forecastValue: any[] = richTooltip ? params : [params];
 
         const sortedKeys = extractTooltipKeys(
           forecastValue,
-          // horizontal mode is not supported in mixed series chart
-          1,
+          yIndex,
           richTooltip,
           tooltipSortByMetric,
         );
 
         const rows: string[][] = [];
         const forecastValues =
-          extractForecastValuesFromTooltipParams(forecastValue);
+          extractForecastValuesFromTooltipParams(forecastValue, isHorizontal);
 
         const keys = Object.keys(forecastValues);
         let focusedRow;
