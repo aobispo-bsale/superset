@@ -27,6 +27,7 @@ import {
   EchartsMixedTimeseriesFormData,
   EchartsMixedTimeseriesProps,
 } from '../../src/MixedTimeseries/types';
+import { OrientationType } from '../../src/Timeseries/types';
 
 const formData: EchartsMixedTimeseriesFormData = {
   annotationLayers: [],
@@ -259,4 +260,136 @@ it('legend margin: right orientation sets grid.right correctly', () => {
   const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
 
   expect((transformed.echartOptions.grid as any).right).toEqual(270);
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 1 — Vertical baseline regression (Scenarios 1 & 2)
+// ---------------------------------------------------------------------------
+describe('horizontal orientation', () => {
+  it('Scenario 1: defaults to Vertical when orientation is omitted — xAxis is scalar, yAxis is length-2 array, no xAxisIndex on series', () => {
+    // orientation field omitted entirely — DEFAULT_FORM_DATA must supply Vertical
+    const chartProps = new ChartProps(chartPropsConfig);
+    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const opts = transformed.echartOptions as any;
+
+    // xAxis must be a scalar object (not an array)
+    expect(Array.isArray(opts.xAxis)).toBe(false);
+    expect(typeof opts.xAxis).toBe('object');
+
+    // yAxis must be a length-2 array
+    expect(Array.isArray(opts.yAxis)).toBe(true);
+    expect(opts.yAxis.length).toBe(2);
+
+    // every series has yAxisIndex (not xAxisIndex)
+    const allSeries: any[] = opts.series;
+    allSeries.forEach((s: any) => {
+      expect('yAxisIndex' in s || !('xAxisIndex' in s)).toBe(true);
+      expect('xAxisIndex' in s).toBe(false);
+    });
+  });
+
+  it('Scenario 2: explicit OrientationType.Vertical produces same axis structure as omitted orientation', () => {
+    const defaultChartProps = new ChartProps(chartPropsConfig);
+    const defaultTransformed = transformProps(
+      defaultChartProps as EchartsMixedTimeseriesProps,
+    );
+    const defaultOpts = defaultTransformed.echartOptions as any;
+
+    const verticalChartProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: { ...formData, orientation: OrientationType.Vertical },
+    });
+    const verticalTransformed = transformProps(
+      verticalChartProps as EchartsMixedTimeseriesProps,
+    );
+    const verticalOpts = verticalTransformed.echartOptions as any;
+
+    // Both must have scalar xAxis
+    expect(Array.isArray(verticalOpts.xAxis)).toBe(false);
+    // Both must have length-2 yAxis
+    expect(Array.isArray(verticalOpts.yAxis)).toBe(true);
+    expect(verticalOpts.yAxis.length).toBe(2);
+
+    // Axis type must match between default and explicit vertical
+    expect(verticalOpts.xAxis.type).toEqual(defaultOpts.xAxis.type);
+    expect(verticalOpts.yAxis[0].type).toEqual(defaultOpts.yAxis[0].type);
+    expect(verticalOpts.yAxis[1].type).toEqual(defaultOpts.yAxis[1].type);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Cycle 2 — Axis swap structure (Scenarios 3, 4, 6)
+  // ---------------------------------------------------------------------------
+  it('Scenario 3: orientation=Horizontal swaps axes — yAxis is scalar category, xAxis is length-2 value array', () => {
+    const chartProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: { ...formData, orientation: OrientationType.Horizontal },
+    });
+    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const opts = transformed.echartOptions as any;
+
+    // xAxis must become a length-2 array
+    expect(Array.isArray(opts.xAxis)).toBe(true);
+    expect(opts.xAxis.length).toBe(2);
+
+    // Both value axes
+    expect(opts.xAxis[0].type).toBe('value');
+    expect(opts.xAxis[1].type).toBe('value');
+
+    // yAxis must become a scalar category axis
+    expect(Array.isArray(opts.yAxis)).toBe(false);
+    expect(opts.yAxis.type).toBe('category');
+  });
+
+  it('Scenario 4: xAxis[0].position="bottom" (primary) and xAxis[1].position="top" (secondary) in horizontal mode', () => {
+    const chartProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: { ...formData, orientation: OrientationType.Horizontal },
+    });
+    const transformed = transformProps(chartProps as EchartsMixedTimeseriesProps);
+    const opts = transformed.echartOptions as any;
+
+    expect(opts.xAxis[0].position).toBe('bottom');
+    expect(opts.xAxis[1].position).toBe('top');
+    expect(opts.xAxis[0].position).not.toBe('left');
+    expect(opts.xAxis[0].position).not.toBe('right');
+    expect(opts.xAxis[1].position).not.toBe('left');
+    expect(opts.xAxis[1].position).not.toBe('right');
+  });
+
+  it('Scenario 6: grid padding swaps — left wider than bottom in horizontal mode vs vertical baseline', () => {
+    // Vertical baseline: legend on left to force non-trivial padding
+    const verticalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        showLegend: true,
+        legendOrientation: LegendOrientation.Left,
+        legendMargin: 100,
+      },
+    });
+    const verticalTransformed = transformProps(
+      verticalProps as EchartsMixedTimeseriesProps,
+    );
+    const verticalGrid = (verticalTransformed.echartOptions as any).grid;
+
+    const horizontalProps = new ChartProps({
+      ...chartPropsConfig,
+      formData: {
+        ...formData,
+        orientation: OrientationType.Horizontal,
+        showLegend: true,
+        legendOrientation: LegendOrientation.Left,
+        legendMargin: 100,
+      },
+    });
+    const horizontalTransformed = transformProps(
+      horizontalProps as EchartsMixedTimeseriesProps,
+    );
+    const horizontalGrid = (horizontalTransformed.echartOptions as any).grid;
+
+    // In horizontal mode, left and bottom padding values should be swapped
+    // relative to the vertical baseline from the same getPadding call
+    expect(horizontalGrid.left).toEqual(verticalGrid.bottom);
+    expect(horizontalGrid.bottom).toEqual(verticalGrid.left);
+  });
 });
