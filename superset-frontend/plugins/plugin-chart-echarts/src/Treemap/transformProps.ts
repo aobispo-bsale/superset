@@ -182,10 +182,16 @@ export default function transformProps(
   const metricLabel = getMetricLabel(metric);
   const groupbyLabels = groupby.map(getColumnLabel);
   const treeData = treeBuilder(data, groupbyLabels, metricLabel);
+  // No `borderColor`/`borderWidth` here: on an ECharts label those draw a box
+  // around the text, not a stroke on the glyphs (that would be
+  // `textBorderColor`/`textBorderWidth`). Painted with the theme background,
+  // that box rendered as a 1px hairline cutting across tiles — white in light
+  // theme, near-black in dark — and it landed on fractional coordinates, so it
+  // moved or vanished with any layout change, which made it look like a
+  // rasterisation artifact. Introduced upstream in Superset 6.0.0; 4.1.x had no
+  // label border and no hairline.
   const labelProps = {
     color: theme.colorText,
-    borderColor: theme.colorBgBase,
-    borderWidth: 1,
   };
   const traverse = (treeNodes: TreeNode[], path: string[], depth = 0) =>
     treeNodes.map(treeNode => {
