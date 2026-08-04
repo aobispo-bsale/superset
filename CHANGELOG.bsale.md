@@ -17,6 +17,26 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+### Fixed
+
+- **treemap**: removed the 1px hairline that cut across tiles, splitting a
+  single data node in two. `labelProps` carried `borderColor: theme.colorBgBase`
+  with `borderWidth: 1`, and on an ECharts label those properties draw a **box
+  around the text**, not a stroke on the glyphs — that is
+  `textBorderColor`/`textBorderWidth`. Painted with the theme background, the
+  box rendered as a hairline: white in light theme, near-black in dark. Because
+  it landed on fractional coordinates it moved or disappeared with any layout
+  change, which is why it read as a rasterisation artifact and survived every
+  attempt to fix it through `borderWidth`, `gapWidth` or the border colour.
+  Introduced upstream in Superset 6.0.0 — 4.1.x had no label border and no
+  hairline — and reported upstream as
+  [apache/superset#36807](https://github.com/apache/superset/issues/36807)
+  ("a 1px wide gap around the key and or value text"), still open with no root
+  cause identified. Verified by pixel measurement across 5 different treemap
+  geometries: every geometry that showed hairlines now shows none, and the tile
+  separators are unchanged. Scope is the treemap plugin only; no other chart is
+  affected.
+
 ## [6.0.0-bsale.5] - 2026-05-21
 
 ### Added

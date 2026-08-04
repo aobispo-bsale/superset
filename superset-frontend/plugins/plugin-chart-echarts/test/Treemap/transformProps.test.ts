@@ -212,3 +212,41 @@ describe('Treemap hierarchical color', () => {
     expect(topLevel.every((n: any) => n.itemStyle?.color)).toBe(true);
   });
 });
+
+describe('Treemap label border', () => {
+  const chartProps = new ChartProps({
+    formData: {
+      colorScheme: 'bnbColors',
+      datasource: '3__table',
+      granularity_sqla: 'ds',
+      metric: 'sum__num',
+      groupby: ['foo', 'bar'],
+    },
+    width: 800,
+    height: 600,
+    queriesData: [
+      {
+        data: [
+          { foo: 'IndustriaA', bar: 'segA1', sum__num: 10 },
+          { foo: 'IndustriaB', bar: 'segB1', sum__num: 3 },
+        ],
+      },
+    ],
+    theme: supersetTheme,
+  }) as EchartsTreemapChartProps;
+
+  // `borderColor`/`borderWidth` on an ECharts label draw a box around the text,
+  // not a stroke on the glyphs. Painted with the theme background they rendered
+  // as a 1px hairline cutting across tiles (white in light theme, near-black in
+  // dark). Text legibility belongs to textBorderColor/textBorderWidth instead.
+  it('never sets a box border on labels', () => {
+    const series = (transformProps(chartProps).echartOptions as any).series[0];
+    const labelSlots = [series.label, series.upperLabel, series.emphasis?.label];
+
+    labelSlots.forEach(slot => {
+      expect(slot).toBeDefined();
+      expect(slot.borderWidth).toBeUndefined();
+      expect(slot.borderColor).toBeUndefined();
+    });
+  });
+});
