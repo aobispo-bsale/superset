@@ -17,6 +17,8 @@ repository (e.g. version `6.0.0-bsale.1` is published as
 
 ## [Unreleased]
 
+## [6.0.0-bsale.6] - 2026-08-04
+
 ### Fixed
 
 - **treemap**: removed the 1px hairline that cut across tiles, splitting a
@@ -162,7 +164,8 @@ Initial Bsale fork snapshot on top of upstream Apache Superset `6.0.0`.
   base image pulled from ECR is compressed with zstd, and decompression fails
   without the tool present.
 
-[Unreleased]: https://github.com/aobispo-bsale/superset/compare/6.0.0-bsale.3...HEAD
+[Unreleased]: https://github.com/Bsale-IO/superset/compare/6.0.0-bsale.6...HEAD
+[6.0.0-bsale.6]: https://github.com/Bsale-IO/superset/releases/tag/6.0.0-bsale.6
 [6.0.0-bsale.3]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.3
 [6.0.0-bsale.2]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.2
 [6.0.0-bsale.1]: https://github.com/aobispo-bsale/superset/releases/tag/6.0.0-bsale.1
